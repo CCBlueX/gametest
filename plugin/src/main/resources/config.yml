@@ -1,0 +1,2 @@
+# How many sessions may run at once. A test player that opens one more is told to ask again.
+max-sessions: 8

@@ -1,0 +1,10 @@
+# What the plugin compiles against. The server it runs on is pinned in server/Dockerfile; keep both in step.
+[versions]
+jdk = "25"
+minecraft = "26.3"
+
+paper = "26.3.build.248-stable"
+paperweight = "2.0.0-beta.24"
+
+[plugins]
+paperweight-userdev = { id = "io.papermc.paperweight.userdev", version.ref = "paperweight" }

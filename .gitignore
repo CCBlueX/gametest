@@ -1,0 +1,10 @@
+.gradle/
+build/
+.idea/
+*.iml
+.omp/
+
+# Local stack: secrets, machine specific compose settings and server data
+.env
+compose.override.yaml
+data/
