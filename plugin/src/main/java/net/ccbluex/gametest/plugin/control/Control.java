@@ -3,6 +3,7 @@ package net.ccbluex.gametest.plugin.control;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
+import net.ccbluex.gametest.plugin.anticheat.Anticheat;
 import net.ccbluex.gametest.plugin.session.Session;
 import net.minecraft.network.protocol.common.ClientboundCustomPayloadPacket;
 import net.minecraft.network.protocol.common.custom.DiscardedPayload;
@@ -29,11 +30,12 @@ public final class Control {
     private Control() {
     }
 
-    public static void ready(Player player, Session session, boolean resumed) {
+    public static void ready(Player player, Session session, boolean resumed, Anticheat anticheat) {
         send(player, "ready", message -> {
             message.addProperty("session", session.id());
             message.addProperty("resumed", resumed);
             message.addProperty("server", Bukkit.getName() + " " + Bukkit.getVersion());
+            message.addProperty("anticheat", anticheat.describe());
         });
     }
 

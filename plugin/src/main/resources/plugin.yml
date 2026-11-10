@@ -2,6 +2,8 @@ name: GameTest
 version: "${version}"
 main: net.ccbluex.gametest.plugin.GameTestServer
 api-version: "26.3"
+depend: [PluginHooker]
+softdepend: [GrimAC, Intave, Vulcan, Matrix, Spartan, MX, AntiCheatAddition, FairPlay]
 description: Gives every game test client a session with worlds of its own and reports what the server objects to.
 website: https://github.com/CCBlueX/gametest
 authors: [CCBlueX]

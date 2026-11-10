@@ -5,6 +5,12 @@ minecraft = "26.3"
 
 paper = "26.3.build.248-stable"
 paperweight = "2.0.0-beta.24"
+grim-api = "1.6.0.12"
+pluginhooker = "2.1.0"
+
+[libraries]
+grim-api = { group = "ac.grim.grimac", name = "GrimAPI", version.ref = "grim-api" }
+pluginhooker-api = { group = "dev.diona", name = "hooker-api", version.ref = "pluginhooker" }
 
 [plugins]
 paperweight-userdev = { id = "io.papermc.paperweight.userdev", version.ref = "paperweight" }

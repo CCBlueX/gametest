@@ -4,6 +4,7 @@ import com.google.gson.JsonObject;
 import io.papermc.paper.event.player.AsyncPlayerSpawnLocationEvent;
 import net.ccbluex.gametest.plugin.Lobby;
 import net.ccbluex.gametest.plugin.TestPlayers;
+import net.ccbluex.gametest.plugin.anticheat.Anticheat;
 import net.ccbluex.gametest.plugin.control.Control;
 import net.ccbluex.gametest.plugin.isolation.DimensionView;
 import net.kyori.adventure.text.Component;
@@ -81,13 +82,22 @@ public final class Sessions implements Listener {
     }
 
     public void open(Player player, JsonObject message) {
+        var anticheat = Anticheat.of(player);
+        if (anticheat == null) {
+            Control.error(player, "No anticheat goes by the letter " + player.getName().charAt(2));
+            return;
+        }
         var session = of(player);
         if (session != null) {
             if (session.closing) {
                 Control.error(player, "This session was closed");
             } else {
-                Control.ready(player, session, true);
+                Control.ready(player, session, true, anticheat);
             }
+            return;
+        }
+        if (!anticheat.installed()) {
+            Control.error(player, anticheat.describe() + " is not installed on this server");
             return;
         }
         if (byPlayer.size() >= limit) {
@@ -111,7 +121,7 @@ public final class Sessions implements Listener {
         opened.lifetime = later(LIFETIME_SECONDS, () -> end(opened, "it reached its time limit"));
         player.setGameMode(GameMode.SURVIVAL);
         plugin.getSLF4JLogger().info("Session {} opened: {}", opened.id(), opened.info());
-        Control.ready(player, opened, false);
+        Control.ready(player, opened, false, anticheat);
     }
 
     public void command(Player player, JsonObject message) {
