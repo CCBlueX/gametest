@@ -8,4 +8,4 @@ pluginManagement {
 
 rootProject.name = "gametest"
 
-include("plugin")
+include("harness", "plugin")

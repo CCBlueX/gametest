@@ -8,9 +8,21 @@ paperweight = "2.0.0-beta.24"
 grim-api = "1.6.0.12"
 pluginhooker = "2.1.0"
 
+fabric-loom = "1.19-SNAPSHOT"
+fabric-loader = "0.19.5"
+fabric-api = "0.165.0+26.3"
+fabric-kotlin = "1.14.1+kotlin.2.4.20"
+kotlin = "2.4.20"
+
 [libraries]
 grim-api = { group = "ac.grim.grimac", name = "GrimAPI", version.ref = "grim-api" }
 pluginhooker-api = { group = "dev.diona", name = "hooker-api", version.ref = "pluginhooker" }
+minecraft = { group = "com.mojang", name = "minecraft", version.ref = "minecraft" }
+fabric-loader = { group = "net.fabricmc", name = "fabric-loader", version.ref = "fabric-loader" }
+fabric-api = { group = "net.fabricmc.fabric-api", name = "fabric-api", version.ref = "fabric-api" }
+fabric-kotlin = { group = "net.fabricmc", name = "fabric-language-kotlin", version.ref = "fabric-kotlin" }
 
 [plugins]
 paperweight-userdev = { id = "io.papermc.paperweight.userdev", version.ref = "paperweight" }
+fabric-loom = { id = "net.fabricmc.fabric-loom", version.ref = "fabric-loom" }
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

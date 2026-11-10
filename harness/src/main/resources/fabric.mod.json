@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "gametest-harness",
+  "version": "${version}",
+  "name": "Game test harness",
+  "description": "Client game tests on a shared Paper server with an anticheat of choice watching.",
+  "authors": ["CCBlueX"],
+  "contact": {
+    "sources": "https://github.com/CCBlueX/gametest"
+  },
+  "license": "GPL-3.0-or-later",
+  "environment": "client",
+  "accessWidener": "gametest-harness.accesswidener",
+  "mixins": ["gametest-harness.mixins.json"],
+  "depends": {
+    "minecraft": "~${minecraft}",
+    "fabric-client-gametest-api-v1": "*",
+    "fabric-networking-api-v1": "*",
+    "fabric-language-kotlin": "*"
+  }
+}
