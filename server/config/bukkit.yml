@@ -1,0 +1,6 @@
+# Only what differs from Bukkit's defaults; Paper fills in the rest.
+settings:
+  # Sessions get an End of their own; nobody may meet in a shared one
+  allow-end: false
+  # Tests reconnect at once, and every bot of a CI runner comes from the same address
+  connection-throttle: 0

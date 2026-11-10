@@ -1,0 +1,24 @@
+# The game test server: `./gradlew :plugin:build`, then `docker compose up --build`. Bots connect straight to
+# localhost:25565 and pick their anticheat by name.
+name: gametest
+
+services:
+  server:
+    container_name: gametest-server
+    build: server
+    environment:
+      MEMORY: 3G
+    volumes:
+      - ./server/config:/config:ro
+      - ./plugin/build/libs:/plugins:ro
+      - data:/data
+    ports:
+      - "25565:25565"
+    mem_limit: 4g
+    memswap_limit: 4g
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+
+volumes:
+  data:

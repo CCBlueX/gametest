@@ -1,0 +1,15 @@
+# Intave only reports: tests read its violations, and a kick by IP address would end every other test from the
+# same machine.
+config: THIS
+
+prefix: "&8[&c&lIntave&8]&7 "
+
+kick-commands: []
+ban-commands: []
+
+physics-mm: BARELY
+rejoin-delay: 0
+privacy: HIGHEST_PRIVACY
+
+verbose: "{prefix} &c{player}&7/{trust-color}&7 {message} {details} (+{vladded} -> {vl})"
+notify: "{prefix} &c&lInfo&8: &7{text}"

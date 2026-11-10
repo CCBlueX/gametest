@@ -1,0 +1,5 @@
+# Only what differs from Paper's defaults; Paper fills in the rest.
+_version: 31
+misc:
+  # Sessions get a Nether of their own; nobody may meet in a shared one
+  enable-nether: false

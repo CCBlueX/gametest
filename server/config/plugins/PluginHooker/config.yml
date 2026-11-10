@@ -1,0 +1,10 @@
+# The GameTest plugin puts the anticheats into the sandbox. Players an anticheat does not watch are hidden from it
+# as well, so it never mixes them into the checks of the ones it does.
+bstats: false
+
+hook:
+  bukkit-api:
+    hide-from-online-players: true
+    hide-from-world-players: true
+    hide-from-get-player: true
+    hide-from-entity-lists: true
