@@ -6,6 +6,7 @@ import net.ccbluex.gametest.harness.verdict.ConsoleLine
 import net.ccbluex.gametest.harness.verdict.ServerReport
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking
+import org.apache.logging.log4j.LogManager
 import java.nio.file.Path
 import java.time.LocalTime
 import java.time.temporal.ChronoUnit
@@ -117,6 +118,13 @@ class ServerSession internal constructor(private val context: ClientGameTestCont
     private fun add(line: ConsoleLine) {
         record("< $line")
         lines += line
+        if (line.report == ServerReport.NOTE) {
+            logger.warn("{} in {}", line, log)
+        }
+    }
+
+    private companion object {
+        val logger = LogManager.getLogger("GameTest")
     }
 
     @Synchronized

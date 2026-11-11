@@ -107,7 +107,8 @@ java.lang.IllegalStateException: the server objected 2 time(s), see gametest/Aut
 
 `build/run/clientGameTest/gametest/<Test>.log` has every message the test sent (`>`) and got (`<`) with
 timestamps. FLAG is `<check> <violations> <details>`; the check name says what the anticheat thinks happened:
-movement physics, interaction geometry (reach, hitboxes), packet content and order, inventory clicks.
+movement physics, interaction geometry (reach, hitboxes), packet content and order, inventory clicks. NOTE is a flag
+of a check the anticheat calls experimental: logged as a warning, never a failure.
 `build/run/clientGameTest/logs/latest.log` is the client.
 
 Common causes: a command sent right before the test ended (the harness waits for answers, but not for effects),

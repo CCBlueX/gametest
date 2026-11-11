@@ -65,11 +65,16 @@ public final class Probe implements Listener {
 
     /** A flag of {@code anticheat}: the check as one word, its violations and whatever else the anticheat adds. */
     void flag(Anticheat anticheat, UUID player, Object check, Object violations, Object... details) {
+        flag(anticheat, player, "FLAG", check, violations, details);
+    }
+
+    /** A flag reported as {@code report}, such as NOTE for a check the anticheat calls experimental. */
+    void flag(Anticheat anticheat, UUID player, String report, Object check, Object violations, Object... details) {
         var fields = new Object[details.length + 2];
         fields[0] = String.valueOf(check).replaceAll("\\s+", "");
         fields[1] = violations;
         System.arraycopy(details, 0, fields, 2, details.length);
-        report(anticheat, player, "FLAG", fields);
+        report(anticheat, player, report, fields);
     }
 
     /** {@code anticheat} put the player back to where it stands now. */

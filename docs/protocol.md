@@ -36,7 +36,7 @@ Server to client:
 | `closed` | | The answer to `close`. A client quits only after it, or the server may never read the `close`. |
 | `output` | `id: int`, `message: string` | One feedback line of command `id`, as a console shows it. |
 | `done` | `id: int`, `result: int` | Command `id` finished; `result` is what it returned, 0 when it failed. Sent after its output. |
-| `report` | `report: "FLAG"\|"SETBACK"\|"FAILMOVE"\|"KICK"`, `message: string` | The server objected: FLAG `<check> <violations> <details>` and SETBACK `<x> <y> <z>` from the player's anticheat, FAILMOVE `<reason>` and KICK `<cause> <reason>` from Paper. |
+| `report` | `report: "FLAG"\|"NOTE"\|"SETBACK"\|"FAILMOVE"\|"KICK"`, `message: string` | The server objected: FLAG `<check> <violations> <details>` and SETBACK `<x> <y> <z>` from the player's anticheat, FAILMOVE `<reason>` and KICK `<cause> <reason>` from Paper. NOTE is a FLAG of a check the anticheat calls experimental; it does not fail a test. |
 | `log` | `level: "INFO"\|"WARN"\|"ERROR"`, `message: string` | A line of the server log that contains the player's name. |
 | `error` | `message: string`, `id?: int` | Protocol misuse, or a refused command, which is followed by `done` with result 0. |
 

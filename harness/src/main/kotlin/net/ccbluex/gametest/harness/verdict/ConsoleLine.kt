@@ -22,6 +22,7 @@ data class ConsoleLine(
 
 /**
  * What the server reports about the player by itself: an anticheat flag or setback, a movement Paper corrected,
- * a kick, a refused command or misused protocol, and, noticed by the client, the end of the connection.
+ * a kick, a refused command or misused protocol, and, noticed by the client, the end of the connection. A NOTE is a
+ * flag of a check the anticheat calls experimental; it is only logged as a warning.
  */
-enum class ServerReport { FLAG, SETBACK, FAILMOVE, KICK, ERROR, QUIT }
+enum class ServerReport { FLAG, NOTE, SETBACK, FAILMOVE, KICK, ERROR, QUIT }

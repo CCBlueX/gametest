@@ -33,6 +33,7 @@ class Verdict(private val server: ServerSession) {
     fun isViolation(line: ConsoleLine, leaving: Boolean = false) = when (line.report) {
         ServerReport.FLAG, ServerReport.SETBACK, ServerReport.FAILMOVE, ServerReport.KICK, ServerReport.ERROR -> true
         ServerReport.QUIT -> !leaving
+        ServerReport.NOTE -> false
         null -> line.level == "WARN" || line.level == "ERROR"
     }
 
