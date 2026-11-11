@@ -55,6 +55,7 @@ Scope (`GameTestScope`, the receiver of the test body):
 
 - `origin`: where the bot starts, looking south. FLAT: grass at y -61, origin (0, -60, 0). `TestWorld.VOID`: stone
   platform, origin (0, 64, 0). `TestWorld.generated(seed, structures)`: real terrain, sealed glass room at (0, -40, 0).
+  `TestWorld.generated(seed, origin) { prepare }`: real terrain with a start the test builds itself.
 - `playerName`, `anticheat` (`Anticheat` enum): branch on it when only one anticheat catches something.
 - `client { minecraft -> }`: run on the client thread and return a value. Never block inside it.
 - `ticks(n)`, `awaitClient(what, timeout) { minecraft -> condition }`.

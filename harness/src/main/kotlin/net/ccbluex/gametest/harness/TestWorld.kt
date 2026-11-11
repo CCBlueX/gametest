@@ -50,6 +50,24 @@ class TestWorld private constructor(
             awaitServer("block 0 -41 0 minecraft:glass")
         }
 
+        /**
+         * A default world from [seed] with the test's own start: the player appears at [origin] once [prepare] has
+         * built what it needs there, such as a pad on real terrain.
+         */
+        fun generated(
+            seed: Long,
+            origin: BlockPos,
+            structures: Boolean = false,
+            prepare: GameTestScope.() -> Unit,
+        ) = TestWorld(
+            generation("normal") {
+                addProperty("seed", seed.toString())
+                addProperty("structures", structures)
+            },
+            origin,
+            prepare,
+        )
+
         private fun generation(type: String, settings: JsonObject.() -> Unit = {}) =
             JsonObject().apply { addProperty("type", type) }.apply(settings)
 
