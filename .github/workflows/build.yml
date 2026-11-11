@@ -1,0 +1,76 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    # Paperweight decompiles the server on a cold cache, which takes a few minutes
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+      - name: Set up JDK
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '25'
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+      - name: Build
+        # A tag v1.2.3 builds version 1.2.3
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            VERSION="-Pversion=${GITHUB_REF_NAME#v}"
+            echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          fi
+          ./gradlew build ${VERSION:-}
+      - name: Build the server image
+        # Catches a pinned jar that moved or no longer matches its checksum
+        run: docker build server
+      - name: Publish the harness
+        # Snapshots from main, releases from tags
+        if: github.event_name == 'push'
+        env:
+          MAVEN_USERNAME: ${{ secrets.MAVEN_TOKEN_NAME }}
+          MAVEN_PASSWORD: ${{ secrets.MAVEN_TOKEN_SECRET }}
+        run: ./gradlew :harness:publish ${VERSION:-}
+      - name: Upload the jars
+        uses: actions/upload-artifact@v7
+        with:
+          name: jars
+          path: |
+            plugin/build/libs/gametest-plugin.jar
+            harness/build/libs/gametest-harness-*.jar
+          if-no-files-found: error
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - name: Download the jars
+        uses: actions/download-artifact@v7
+        with:
+          name: jars
+      - name: Attach the jars to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          if ! gh release view "$TAG" > /dev/null 2>&1; then
+            gh release create "$TAG" --title "$TAG" --generate-notes --verify-tag
+          fi
+          gh release upload "$TAG" plugin/build/libs/gametest-plugin.jar harness/build/libs/gametest-harness-*.jar --clobber
