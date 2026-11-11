@@ -45,10 +45,13 @@ public final class Budget implements Listener {
         return bucket.take() ? null : "More than " + (int) COMMANDS_PER_SECOND + " commands a second";
     }
 
-    /** Notes a command that held up the server, so that whoever sent it can be found, and trims forced chunks. */
+    /**
+     * Notes a command that held up the server, so that whoever sent it can be found, and trims forced chunks. Only
+     * at info: a slow command is the server's load, not something the test did wrong.
+     */
     public void ran(Session session, String line, long nanos) {
         if (nanos > SLOW_NANOS) {
-            logger.warn("Session {} of {} ran a command for {} ms: {}",
+            logger.info("Session {} of {} ran a command for {} ms: {}",
                 session.id(), session.playerName(), nanos / 1_000_000, line);
         }
         for (var world : session.worlds()) {
