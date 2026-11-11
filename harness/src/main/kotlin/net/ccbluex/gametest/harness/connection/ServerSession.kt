@@ -97,7 +97,11 @@ class ServerSession internal constructor(private val context: ClientGameTestCont
                 record("< $json")
                 results[message["id"].asInt] = message["result"].asInt
             }
-            "report" -> add(ConsoleLine("", text, ServerReport.valueOf(message["report"].asString)))
+            "report" -> {
+                val report = ServerReport.entries.firstOrNull { it.name == message["report"].asString }
+                add(report?.let { ConsoleLine("", text, it) }
+                    ?: ConsoleLine("", "unknown report: $json", ServerReport.ERROR))
+            }
             "log" -> add(ConsoleLine(message["level"].asString, text))
             "error" -> add(ConsoleLine("", text, ServerReport.ERROR, message["id"]?.asInt))
             else -> add(ConsoleLine("", "unknown message '$type': $json", ServerReport.ERROR))
