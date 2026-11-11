@@ -9,9 +9,12 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.craftbukkit.command.ServerCommandSender;
 import org.bukkit.entity.Player;
 
+import java.util.concurrent.CompletableFuture;
+
 /**
  * Who runs a session's commands: a console whose feedback goes to the harness as {@code output} lines instead
- * of the server log, and which counts what the command returned.
+ * of the server log, which counts what the command returned and collects what it started that later commands have
+ * to wait for.
  */
 final class SessionConsole implements CommandSource, CommandResultCallback {
 
@@ -23,6 +26,7 @@ final class SessionConsole implements CommandSource, CommandResultCallback {
     private int results;
     private int successes;
     private int lastResult;
+    private CompletableFuture<?> work = CompletableFuture.completedFuture(null);
 
     SessionConsole(Session session, Player player, int command) {
         this.session = session;
@@ -67,6 +71,15 @@ final class SessionConsole implements CommandSource, CommandResultCallback {
     /** Brigadier's return value: what the command returned, or how many of its forks succeeded. */
     int result() {
         return results == 1 ? lastResult : successes;
+    }
+
+    /** Holds back the session's next commands until {@code started} is done. */
+    void await(CompletableFuture<?> started) {
+        work = CompletableFuture.allOf(work, started);
+    }
+
+    CompletableFuture<?> work() {
+        return work;
     }
 
     /**

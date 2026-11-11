@@ -44,8 +44,13 @@ Server to client:
 
 A session has an overworld, and a Nether and an End from the first command that names them; the client and the
 commands see them as `minecraft:overworld`, `minecraft:the_nether` and `minecraft:the_end`, and the lobby as
-`gametest:lobby`. `open` moves the player out of the lobby, and it stays out until the session ends. A session lasts
-30 minutes at most and waits 60 s for a player who left without `close`.
+`gametest:lobby`. `open` moves the player out of the lobby, and it stays out until the session ends; `ready` comes
+once the player is in the session's overworld. A session lasts 30 minutes at most and waits 60 s for a player who
+left without `close`.
+
+`forceload add` and a teleport into chunks that are not loaded answer at once and load the chunks in the background,
+not on the server thread, where generating them would stall every other session. The session's next commands run
+once the chunks are there, in the order they came.
 
 Commands run at permission level 2 and reach only the session's worlds and its own player:
 

@@ -1,6 +1,7 @@
 package net.ccbluex.gametest.plugin.session;
 
 import com.google.gson.JsonObject;
+import io.papermc.paper.entity.TeleportFlag;
 import io.papermc.paper.event.player.AsyncPlayerSpawnLocationEvent;
 import net.ccbluex.gametest.plugin.Lobby;
 import net.ccbluex.gametest.plugin.TestPlayers;
@@ -18,6 +19,8 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerTeleportEvent;
+import org.bukkit.event.player.PlayerTeleportEvent.TeleportCause;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitTask;
 import org.jspecify.annotations.Nullable;
@@ -27,6 +30,7 @@ import java.util.Collection;
 import java.util.HexFormat;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -44,6 +48,8 @@ public final class Sessions implements Listener {
     private static final int BUSY_RETRY_SECONDS = 5;
     /** A join that has picked the session's world as its spawn must not find the world gone when it gets there. */
     private static final int JOIN_SECONDS = 15;
+    /** Commands of one session that may wait for the ones before; a harness never has more out at once. */
+    private static final int MAX_WAITING = 256;
 
     private final Plugin plugin;
     private final Lobby lobby;
@@ -99,9 +105,10 @@ public final class Sessions implements Listener {
         if (session != null) {
             if (session.closing) {
                 Control.error(player, "This session was closed");
-            } else {
+            } else if (session.entered) {
                 Control.ready(player, session, true, anticheat);
             }
+            // Otherwise the player is still on the way in, and ready follows its arrival
             return;
         }
         if (!anticheat.installed()) {
@@ -128,10 +135,20 @@ public final class Sessions implements Listener {
         byPlayer.put(player.getUniqueId(), opened);
         opened.lifetime = later(LIFETIME_SECONDS, () -> end(opened, "it reached its time limit"));
         player.setGameMode(GameMode.SURVIVAL);
-        // Out of the lobby at once: commands of the session must never act there through its player
-        player.teleport(opened.overworld().getSpawnLocation().add(0.5, 0, 0.5));
-        plugin.getSLF4JLogger().info("Session {} opened: {}", opened.id(), opened.info());
-        Control.ready(player, opened, false, anticheat);
+        // Out of the lobby before the first command: commands of the session must never act there through its
+        // player. The spawn's chunks load off the server thread first, and the commands wait for the trip.
+        var arrival = player.teleportAsync(opened.overworld().getSpawnLocation().add(0.5, 0, 0.5))
+            .thenAccept(arrived -> {
+                if (!arrived) {
+                    Control.error(player, "The server could not move you into the session");
+                    end(opened, "its player never left the lobby");
+                    return;
+                }
+                opened.entered = true;
+                plugin.getSLF4JLogger().info("Session {} opened: {}", opened.id(), opened.info());
+                Control.ready(player, opened, false, anticheat);
+            });
+        await(opened, arrival);
     }
 
     public void command(Player player, JsonObject message) {
@@ -146,14 +163,81 @@ public final class Sessions implements Listener {
         }
         var line = message.get("line").getAsString();
         var id = message.get("id").getAsInt();
+        if (!session.pending.isDone() || !session.waiting.isEmpty()) {
+            if (session.waiting.size() >= MAX_WAITING) {
+                Control.refused(player, id, "Too many commands are waiting for the ones before");
+            } else {
+                session.waiting.add(() -> execute(session, player, id, line));
+            }
+            return;
+        }
+        execute(session, player, id, line);
+    }
+
+    private void execute(Session session, Player player, int id, String line) {
+        // A command that waited is dropped once its player is gone, as the server drops packets of a player who left
+        if (!player.isOnline()) {
+            return;
+        }
         var refusal = budget.admit(session, line);
         if (refusal != null) {
             Control.refused(player, id, refusal);
             return;
         }
         var started = System.nanoTime();
-        commands.run(session, player, id, line);
+        var work = commands.run(session, player, id, line);
         budget.ran(session, line, System.nanoTime() - started);
+        await(session, work);
+    }
+
+    /** Lets the session's next commands run only once {@code work} is done. */
+    private void await(Session session, CompletableFuture<?> work) {
+        if (work.isDone()) {
+            return;
+        }
+        var pending = CompletableFuture.allOf(session.pending, work);
+        session.pending = pending;
+        pending.whenComplete((ignored, failure) -> onServerThread(() -> {
+            if (session.pending == pending) {
+                proceed(session);
+            }
+        }));
+    }
+
+    private void proceed(Session session) {
+        while (session.pending.isDone() && byPlayer.get(session.playerId()) == session) {
+            var next = session.waiting.poll();
+            if (next == null) {
+                return;
+            }
+            next.run();
+        }
+    }
+
+    private void onServerThread(Runnable task) {
+        if (Bukkit.isPrimaryThread()) {
+            task.run();
+        } else {
+            Bukkit.getScheduler().runTask(plugin, task);
+        }
+    }
+
+    /**
+     * A command's teleport into a chunk that is not loaded would generate it on the server thread once the client
+     * confirms the teleport, and anticheats look at the blocks there even sooner. Such a trip waits for the chunks off
+     * the server thread instead, and the session's next commands wait for the trip.
+     */
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    public void onTeleport(PlayerTeleportEvent event) {
+        var session = of(event.getPlayer());
+        var to = event.getTo();
+        if (session == null || event.getCause() != TeleportCause.COMMAND
+            || to.getWorld().isChunkLoaded(to.getBlockX() >> 4, to.getBlockZ() >> 4)) {
+            return;
+        }
+        event.setCancelled(true);
+        var flags = event.getRelativeTeleportationFlags().toArray(TeleportFlag[]::new);
+        await(session, event.getPlayer().teleportAsync(to, event.getCause(), flags));
     }
 
     public void close(Player player) {

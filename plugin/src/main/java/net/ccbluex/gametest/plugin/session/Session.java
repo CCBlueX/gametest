@@ -12,12 +12,15 @@ import org.bukkit.scheduler.BukkitTask;
 import org.jspecify.annotations.Nullable;
 
 import java.time.Duration;
+import java.util.ArrayDeque;
 import java.util.Collection;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 /**
@@ -45,6 +48,12 @@ public final class Session {
     @Nullable BukkitTask closeTimeout;
     /** When the player last started to join, which happens off the server thread. */
     volatile long returning;
+    /** Set once the player has arrived in the session's overworld after {@code open}. */
+    boolean entered;
+    /** What earlier commands started and later ones wait for, such as chunks loading. */
+    CompletableFuture<?> pending = CompletableFuture.completedFuture(null);
+    /** Commands that came in while {@link #pending} was not done, in their order. */
+    final Queue<Runnable> waiting = new ArrayDeque<>();
 
     Session(String id, Player player, WorldSpec spec, Info info) {
         this.id = id;

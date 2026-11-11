@@ -32,6 +32,8 @@ import org.bukkit.event.Listener;
 import org.bukkit.plugin.Plugin;
 import org.jspecify.annotations.Nullable;
 
+import java.util.concurrent.CompletableFuture;
+
 /**
  * Runs the commands of sessions. They are parsed against vanilla's commands and this plugin's own, never the
  * server's dispatcher, so no other plugin's command can be reached from a session.
@@ -65,16 +67,20 @@ public final class SessionCommands implements Listener {
         var context = CommandBuildContext.simple(registries, server.getWorldData().enabledFeatures());
         var commands = new Commands(Commands.CommandSelection.DEDICATED, context, true);
         registerOpenSign(commands.getDispatcher());
+        ForceLoad.register(commands.getDispatcher());
         return commands;
     }
 
-    /** Runs one line as the session's console and tells the player's harness what came of it. */
-    void run(Session session, Player player, int id, String line) {
+    /**
+     * Runs one line as the session's console and tells the player's harness what came of it. Returns what the
+     * command started that the session's next commands have to wait for.
+     */
+    CompletableFuture<?> run(Session session, Player player, int id, String line) {
         var command = Commands.trimOptionalPrefix(line);
         var name = command.split(" ", 2)[0];
         if (!Confinement.isSessionRoot(name)) {
             Control.refused(player, id, "'" + name + "' is not for game test sessions");
-            return;
+            return CompletableFuture.completedFuture(null);
         }
 
         var console = new SessionConsole(session, player, id);
@@ -94,11 +100,12 @@ public final class SessionCommands implements Listener {
         }
         if (refusal != null) {
             Control.refused(player, id, refusal);
-            return;
+            return CompletableFuture.completedFuture(null);
         }
 
         commands.performCommand(parse, command);
         Control.done(player, id, console.result());
+        return console.work();
     }
 
     private @Nullable ServerLevel level(Session session, ResourceKey<Level> dimension) {
