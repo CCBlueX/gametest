@@ -14,8 +14,8 @@ services:
       - data:/data
     ports:
       - "25565:25565"
-    mem_limit: 4g
-    memswap_limit: 4g
+    mem_limit: 5g
+    memswap_limit: 5g
     stdin_open: true
     tty: true
     restart: unless-stopped
