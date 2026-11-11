@@ -6,7 +6,7 @@ minecraft = "26.3"
 paper = "26.3.build.248-stable"
 paperweight = "2.0.0-beta.24"
 grim-api = "1.6.0.12"
-pluginhooker = "2.1.0"
+pluginhooker = "2.1.1"
 
 fabric-loom = "1.19-SNAPSHOT"
 fabric-loader = "0.19.5"

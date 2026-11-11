@@ -10,7 +10,7 @@ ARG PAPER_VERSION=26.3
 ARG PAPER_BUILD=248
 ARG GRIM_VERSION=2.3.75-e457d55
 ARG INTAVE_VERSION=dev-4f18a06dce40
-ARG PLUGINHOOKER_VERSION=2.1.0
+ARG PLUGINHOOKER_VERSION=2.1.1
 RUN fetch fill paper "$PAPER_VERSION" "$PAPER_BUILD" paper.jar \
     && fetch modrinth grimac paper "$GRIM_VERSION" grimac.jar \
     && fetch modrinth intave paper "$INTAVE_VERSION" intave.jar \
