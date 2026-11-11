@@ -87,16 +87,21 @@ class GameTestScope internal constructor(
     fun travel(pos: BlockPos, yaw: Float = 0f, pitch: Float = 0f, dimension: ResourceKey<Level>? = null) {
         val since = server.console.size
         teleport(pos, yaw, pitch, dimension)
+        arrive(pos, dimension, since)
+    }
+
+    /** Waits for the trip that started at console line [since] to end at [pos]. */
+    private fun arrive(pos: BlockPos, dimension: ResourceKey<Level>?, since: Int) {
         // A player in a chunk the client does not have yet keeps its last on-ground state, and there is
         // nothing to render yet either, so the chunk itself has to be there first
         awaitClient("the player to arrive at $pos") { it.hasArrived(pos, dimension) }
         // The anticheat lets go only once it has seen the client confirm the chunk, which can take a few round trips;
-        // after a setback, the next one may come more than a second later
+        // after a correction, the next one may come more than a second later
         var window = 20
         repeat(SETTLE_ATTEMPTS) {
             val checked = server.console.size
             ticks(window)
-            if (server.console.drop(checked).none { it.report == ServerReport.SETBACK }) {
+            if (server.console.drop(checked).none { it.report in CORRECTIONS }) {
                 verdict.excuseCorrections(since until checked)
                 if (anticheat.teleportGraceTicks > 0) {
                     ticks(anticheat.teleportGraceTicks)
@@ -105,7 +110,7 @@ class GameTestScope internal constructor(
             }
             window = 40
         }
-        throw AssertionError("The anticheat kept setting the player back at $pos, see ${server.log}")
+        throw AssertionError("The server kept correcting the player at $pos, see ${server.log}")
     }
 
     /**
@@ -146,6 +151,8 @@ class GameTestScope internal constructor(
         entrance.connect(if (prepared) REJOIN_PATIENCE else FIRST_JOIN_PATIENCE)
         val connected = System.nanoTime()
         joined = true
+        // Opening the session moves the player out of the lobby, the first leg of the trip to the origin
+        val since = server.console.size
         val ready = entrance.open()
         check(ready["resumed"].asBoolean == prepared) {
             if (prepared) "The session did not outlast the reconnect" else "The server resumed a session of $playerName"
@@ -160,7 +167,8 @@ class GameTestScope internal constructor(
             prepared = true
         }
         // The lobby is a dimension of its own, so the session's overworld tells the two apart
-        travel(origin, dimension = Level.OVERWORLD)
+        teleport(origin, 0f, 0f, Level.OVERWORLD)
+        arrive(origin, Level.OVERWORLD, since)
         val elapsedTicks = (System.nanoTime() - connected) / NANOS_PER_TICK
         if (anticheat.warmupTicks > elapsedTicks) {
             ticks((anticheat.warmupTicks - elapsedTicks).toInt())
@@ -214,6 +222,7 @@ class GameTestScope internal constructor(
     companion object {
         const val DEFAULT_TIMEOUT = 200
         internal const val SETTLE_ATTEMPTS = 10
+        private val CORRECTIONS = setOf(ServerReport.SETBACK, ServerReport.FAILMOVE)
         internal const val CLOSE_TIMEOUT = 40
         internal const val COMMAND_TIMEOUT = 100
         internal const val NANOS_PER_TICK = 50_000_000L
