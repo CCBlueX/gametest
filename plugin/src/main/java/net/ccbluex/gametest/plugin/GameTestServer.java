@@ -4,6 +4,7 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import net.ccbluex.gametest.plugin.anticheat.Probe;
 import net.ccbluex.gametest.plugin.anticheat.Sandbox;
+import net.ccbluex.gametest.plugin.anticheat.SpartanProfiles;
 import net.ccbluex.gametest.plugin.control.Control;
 import net.ccbluex.gametest.plugin.control.ControlListener;
 import net.ccbluex.gametest.plugin.control.LogForwarder;
@@ -28,6 +29,7 @@ public final class GameTestServer extends JavaPlugin {
         try {
             Internals.verify();
             probe = Probe.start(this, players);
+            SpartanProfiles.start(this);
         } catch (CommandSyntaxException | ReflectiveOperationException exception) {
             throw new IllegalStateException(exception);
         }
@@ -41,7 +43,7 @@ public final class GameTestServer extends JavaPlugin {
 
         var plugins = getServer().getPluginManager();
         plugins.registerEvents(players, this);
-        plugins.registerEvents(Sandbox.start(), this);
+        plugins.registerEvents(Sandbox.start(this), this);
         plugins.registerEvents(commands, this);
         plugins.registerEvents(sessions, this);
         plugins.registerEvents(sessions.budget(), this);
