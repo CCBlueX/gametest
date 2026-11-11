@@ -81,8 +81,8 @@ class GameTestScope internal constructor(
 
     /**
      * Teleports and waits until the client stands there with the area rendered and the anticheat watches again. An
-     * anticheat may hold a player in chunks the client has not received yet by setting them back; those setbacks
-     * belong to the trip.
+     * anticheat may hold a player in chunks the client has not received yet by setting them back, and after a change
+     * of dimension the client may move before its chunk is there, which Paper corrects; both belong to the trip.
      */
     fun travel(pos: BlockPos, yaw: Float = 0f, pitch: Float = 0f, dimension: ResourceKey<Level>? = null) {
         val since = server.console.size
@@ -95,7 +95,7 @@ class GameTestScope internal constructor(
             val checked = server.console.size
             ticks(20)
             if (server.console.drop(checked).none { it.report == ServerReport.SETBACK }) {
-                verdict.excuseSetbacks(since until checked)
+                verdict.excuseCorrections(since until checked)
                 if (anticheat.teleportGraceTicks > 0) {
                     ticks(anticheat.teleportGraceTicks)
                 }
