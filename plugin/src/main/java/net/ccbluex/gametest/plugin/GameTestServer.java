@@ -44,6 +44,7 @@ public final class GameTestServer extends JavaPlugin {
         plugins.registerEvents(Sandbox.start(), this);
         plugins.registerEvents(commands, this);
         plugins.registerEvents(sessions, this);
+        plugins.registerEvents(sessions.budget(), this);
         plugins.registerEvents(new Isolation(this, lobby, sessions, worlds), this);
         plugins.registerEvents(probe, this);
         getServer().getMessenger().registerIncomingPluginChannel(this, Control.CHANNEL, new ControlListener(sessions));

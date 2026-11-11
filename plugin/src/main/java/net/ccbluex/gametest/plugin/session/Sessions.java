@@ -6,6 +6,7 @@ import net.ccbluex.gametest.plugin.Lobby;
 import net.ccbluex.gametest.plugin.TestPlayers;
 import net.ccbluex.gametest.plugin.anticheat.Anticheat;
 import net.ccbluex.gametest.plugin.control.Control;
+import net.ccbluex.gametest.plugin.isolation.Budget;
 import net.ccbluex.gametest.plugin.isolation.DimensionView;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
@@ -48,6 +49,7 @@ public final class Sessions implements Listener {
     private final Lobby lobby;
     private final SessionWorlds worlds;
     private final SessionCommands commands;
+    private final Budget budget;
     private final int limit;
     private final Map<UUID, Session> byPlayer = new ConcurrentHashMap<>();
     private final SecureRandom random = new SecureRandom();
@@ -57,7 +59,13 @@ public final class Sessions implements Listener {
         this.lobby = lobby;
         this.worlds = worlds;
         this.commands = commands;
+        this.budget = new Budget(plugin.getSLF4JLogger(), this::owning);
         this.limit = limit;
+    }
+
+    /** What the sessions may cost, as a listener that keeps their worlds within it. */
+    public Budget budget() {
+        return budget;
     }
 
     public Collection<Session> all() {
@@ -136,7 +144,16 @@ public final class Sessions implements Listener {
             Control.error(player, "A command needs an id and a line");
             return;
         }
-        commands.run(session, player, message.get("id").getAsInt(), message.get("line").getAsString());
+        var line = message.get("line").getAsString();
+        var id = message.get("id").getAsInt();
+        var refusal = budget.admit(session, line);
+        if (refusal != null) {
+            Control.refused(player, id, refusal);
+            return;
+        }
+        var started = System.nanoTime();
+        commands.run(session, player, id, line);
+        budget.ran(session, line, System.nanoTime() - started);
     }
 
     public void close(Player player) {
