@@ -90,10 +90,12 @@ class GameTestScope internal constructor(
         // A player in a chunk the client does not have yet keeps its last on-ground state, and there is
         // nothing to render yet either, so the chunk itself has to be there first
         awaitClient("the player to arrive at $pos") { it.hasArrived(pos, dimension) }
-        // The anticheat lets go only once it has seen the client confirm the chunk, which can take a few round trips
+        // The anticheat lets go only once it has seen the client confirm the chunk, which can take a few round trips;
+        // after a setback, the next one may come more than a second later
+        var window = 20
         repeat(SETTLE_ATTEMPTS) {
             val checked = server.console.size
-            ticks(20)
+            ticks(window)
             if (server.console.drop(checked).none { it.report == ServerReport.SETBACK }) {
                 verdict.excuseCorrections(since until checked)
                 if (anticheat.teleportGraceTicks > 0) {
@@ -101,6 +103,7 @@ class GameTestScope internal constructor(
                 }
                 return
             }
+            window = 40
         }
         throw AssertionError("The anticheat kept setting the player back at $pos, see ${server.log}")
     }
