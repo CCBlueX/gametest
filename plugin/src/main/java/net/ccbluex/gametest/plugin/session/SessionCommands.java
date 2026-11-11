@@ -72,7 +72,7 @@ public final class SessionCommands implements Listener {
     void run(Session session, Player player, int id, String line) {
         var command = Commands.trimOptionalPrefix(line);
         var name = command.split(" ", 2)[0];
-        if (Confinement.isRefusedRoot(name) || belongsToAnotherPlugin(name)) {
+        if (!Confinement.isSessionRoot(name)) {
             Control.refused(player, id, "'" + name + "' is not for game test sessions");
             return;
         }
@@ -99,11 +99,6 @@ public final class SessionCommands implements Listener {
 
         commands.performCommand(parse, command);
         Control.done(player, id, console.result());
-    }
-
-    private boolean belongsToAnotherPlugin(String name) {
-        return commands.getDispatcher().getRoot().getChild(name) == null
-            && server.getCommands().getDispatcher().getRoot().getChild(name) != null;
     }
 
     private @Nullable ServerLevel level(Session session, ResourceKey<Level> dimension) {

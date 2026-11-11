@@ -120,6 +120,8 @@ public final class Sessions implements Listener {
         byPlayer.put(player.getUniqueId(), opened);
         opened.lifetime = later(LIFETIME_SECONDS, () -> end(opened, "it reached its time limit"));
         player.setGameMode(GameMode.SURVIVAL);
+        // Out of the lobby at once: commands of the session must never act there through its player
+        player.teleport(opened.overworld().getSpawnLocation().add(0.5, 0, 0.5));
         plugin.getSLF4JLogger().info("Session {} opened: {}", opened.id(), opened.info());
         Control.ready(player, opened, false, anticheat);
     }

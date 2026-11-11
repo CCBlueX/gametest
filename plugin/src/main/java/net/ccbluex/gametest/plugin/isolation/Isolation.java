@@ -137,10 +137,13 @@ public final class Isolation implements Listener {
     }
 
     private boolean mayEnter(Player player, World world) {
-        if (!TestPlayers.matches(player) || lobby.contains(world)) {
+        if (!TestPlayers.matches(player)) {
             return true;
         }
         var session = sessions.of(player);
+        if (lobby.contains(world)) {
+            return session == null;
+        }
         return session != null && session.owns(world);
     }
 
@@ -255,7 +258,7 @@ public final class Isolation implements Listener {
                 var hint = "Spectators only have /" + WatchCommand.NAME + ".";
                 player.sendMessage(Component.text(hint, NamedTextColor.RED));
             }
-        } else if (Confinement.isRefusedRoot(root)) {
+        } else if (Confinement.isRefusedForPlayers(root)) {
             event.setCancelled(true);
             player.sendMessage(Component.translatable("command.unknown.command", NamedTextColor.RED));
         } else if (namesSomebodyElse(player, command)) {

@@ -61,7 +61,7 @@ public final class LogForwarder extends AbstractAppender {
         try {
             var line = line(event);
             for (var player : players.online()) {
-                if (line.contains(player.getName())) {
+                if (mentions(line, player.getName())) {
                     var session = sessions.of(player);
                     Control.log(player, level, session == null ? line : session.withShownNames(line));
                 }
@@ -69,6 +69,23 @@ public final class LogForwarder extends AbstractAppender {
         } finally {
             forwarding.set(false);
         }
+    }
+
+    /** The name on its own, not as the start of a longer one: {@code GTV_a} must not hear about {@code GTV_ab}. */
+    private static boolean mentions(String line, String name) {
+        for (var at = line.indexOf(name); at >= 0; at = line.indexOf(name, at + 1)) {
+            var end = at + name.length();
+            var alone = (at == 0 || !isNameChar(line.charAt(at - 1)))
+                && (end == line.length() || !isNameChar(line.charAt(end)));
+            if (alone) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean isNameChar(char character) {
+        return Character.isLetterOrDigit(character) || character == '_';
     }
 
     private static String level(Level level) {

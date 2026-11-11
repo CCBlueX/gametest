@@ -90,6 +90,8 @@ public final class SessionWorlds {
         world.setSpawnLocation(0, level.getChunkSource().getGenerator().getSpawnHeight(level), 0);
         // A wither or dragon of one session must not be heard in every other
         level.getGameRules().set(GameRules.GLOBAL_SOUND_EVENTS, false, level);
+        // One command of a session fans out to at most this many entities, see Confinement
+        level.getGameRules().set(GameRules.MAX_COMMAND_FORKS, 1024, level);
         return world;
     }
 
