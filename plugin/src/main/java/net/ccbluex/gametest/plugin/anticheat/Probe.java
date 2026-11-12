@@ -65,11 +65,14 @@ public final class Probe implements Listener {
 
     /** A flag of {@code anticheat}: the check as one word, its violations and whatever else the anticheat adds. */
     void flag(Anticheat anticheat, UUID player, Object check, Object violations, Object... details) {
-        flag(anticheat, player, "FLAG", check, violations, details);
+        flagAs(anticheat, player, "FLAG", check, violations, details);
     }
 
-    /** A flag reported as {@code report}, such as NOTE for a check the anticheat calls experimental. */
-    void flag(Anticheat anticheat, UUID player, String report, Object check, Object violations, Object... details) {
+    /**
+     * A flag reported as {@code report}, such as NOTE for a check the anticheat calls experimental. Not an overload of
+     * {@link #flag}, which would take a check given as a String for the report.
+     */
+    void flagAs(Anticheat anticheat, UUID player, String report, Object check, Object violations, Object... details) {
         var fields = new Object[details.length + 2];
         fields[0] = String.valueOf(check).replaceAll("\\s+", "");
         fields[1] = violations;

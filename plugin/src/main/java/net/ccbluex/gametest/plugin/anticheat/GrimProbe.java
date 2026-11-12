@@ -18,7 +18,7 @@ final class GrimProbe {
         // Grim calls these on network threads
         events.get(FlagEvent.class).onFlagSupplier(plugin, (user, check, verbose, cancelled) -> {
             var report = check.isExperimental() ? "NOTE" : "FLAG";
-            probe.flag(Anticheat.GRIM, user.getUniqueId(), report, check.getCheckName(), check.getViolations(),
+            probe.flagAs(Anticheat.GRIM, user.getUniqueId(), report, check.getCheckName(), check.getViolations(),
                 verbose.get());
             return cancelled;
         });
