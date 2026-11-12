@@ -10,9 +10,6 @@
   },
   "license": "GPL-3.0-or-later",
   "environment": "client",
-  "entrypoints": {
-    "preLaunch": ["net.ccbluex.gametest.harness.report.ConsoleFilter"]
-  },
   "accessWidener": "gametest-harness.accesswidener",
   "mixins": ["gametest-harness.mixins.json"],
   "depends": {

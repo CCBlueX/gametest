@@ -36,6 +36,7 @@ internal object Console {
 
     private const val NAME_WIDTH = 30
     private const val STACK_LINES = 40
+    private const val LINE_LENGTH = 300
 
     fun header(text: String) = print(bold(text))
 
@@ -113,12 +114,13 @@ internal object Console {
     private fun stack(failure: Throwable) = failure.stackTraceToString().lines().take(STACK_LINES)
 
     private fun group(title: String, lines: List<String>) {
+        val shown = lines.map { it.lineSequence().first().take(LINE_LENGTH) }
         if (github) {
             raw("::group::$title")
-            lines.forEach { print(it) }
+            shown.forEach { print(it) }
             raw("::endgroup::")
         } else {
-            lines.forEach { print("    ${dim(it)}") }
+            shown.forEach { print("    ${dim(it)}") }
         }
     }
 
