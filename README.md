@@ -51,13 +51,18 @@ last. Override `awaitClient`, `beforeJoin` and `afterTest` of `ServerGameTest` t
 A test passes with up to `violationLevel` (5) flags, corrections and errors, and a failed one runs again up to
 `retries` (2) times; both can be overridden per test.
 
+A test with nothing for an anticheat to judge, one of what the client finds, shows or keeps, can override
+`integrated` to `true`. It then plays in a singleplayer world of the client's integrated server: the same
+`TestWorld`, commands and console, but no anticheat and no Paper. Such tests run only while
+`GAMETEST_SERVER_ANTICHEAT` is unset, so CI runs them once, in a job of their own, and needs no token for them.
+
 | Variable | Meaning |
 | --- | --- |
 | `GAMETEST_API_TOKEN` | The API token from your [LiquidBounce account](https://liquidbounce.net/account). Needed for the public server. |
 | `GAMETEST_SERVER_ANTICHEAT` | Which [anticheats](docs/anticheats.md) watch the bots, comma separated: `grim` or `intave,mx`. |
 | `GAMETEST_SERVER_ADDRESS` | Another server, such as `localhost:25565`; then no token is needed. |
 
-Without a token or an address the tests are skipped. `-Dgametest.only=AutoShearer,Harness` runs only those.
+Without a token or an address the server tests are skipped. `-Dgametest.only=AutoShearer,Harness` runs only those.
 
 The console shows a line per test; on GitHub Actions (or with `-Dgametest.console=tests`) nothing else, with
 failures as annotations and a table in the job summary. `-Dgametest.console=all` keeps the whole client log there;

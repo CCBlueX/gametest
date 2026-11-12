@@ -24,7 +24,8 @@ import kotlin.io.path.Path
  *
  * Without `GAMETEST_API_TOKEN` or `GAMETEST_SERVER_ADDRESS` the test is skipped. Outcomes are collected, so
  * [ResultsGameTest] has to be the last game test entrypoint of the mod. A mod puts its own state in order in
- * [awaitClient], [beforeJoin] and [afterTest].
+ * [awaitClient], [beforeJoin] and [afterTest]. A test that no anticheat has to judge can play on the client's
+ * [integrated] server instead.
  */
 abstract class ServerGameTest(
     private val world: TestWorld,
@@ -45,10 +46,22 @@ abstract class ServerGameTest(
      */
     protected open val violationLevel: Int get() = VIOLATION_LEVEL
 
+    /**
+     * Whether the test plays in a singleplayer world of the client's integrated server instead, for a test of what
+     * the client finds, shows or keeps that no anticheat has to judge. The world is driven like a session, with the
+     * same commands, but nothing watches the player, Paper's movement checks included. Such a test runs only while
+     * `GAMETEST_SERVER_ANTICHEAT` is unset, and needs neither token nor address.
+     */
+    protected open val integrated: Boolean get() = false
+
     final override fun runTest(context: ClientGameTestContext) {
         // The runner fails a test that ends off the title screen, a mod's startup screen included, skipped or not
         awaitClient(context)
-        if (!GameTestEnvironment.enabled) {
+        if (integrated) {
+            if (!GameTestEnvironment.integrated) {
+                return
+            }
+        } else if (!GameTestEnvironment.enabled) {
             GameTestResults.skipped()
             return
         }
@@ -60,10 +73,10 @@ abstract class ServerGameTest(
         val attempts = retries + 1
         for (attempt in 1..attempts) {
             attempt(context, attempt)
-                .onSuccess { tolerated -> return GameTestResults.passed(name, attempt, started, tolerated) }
+                .onSuccess { return GameTestResults.passed(name, attempt, started, it, integrated) }
                 .onFailure { failure ->
                     if (attempt == attempts) {
-                        GameTestResults.failed(name, attempt, started, failure)
+                        GameTestResults.failed(name, attempt, started, failure, integrated)
                     } else {
                         GameTestResults.retrying(name, attempt, failure)
                     }
@@ -73,14 +86,14 @@ abstract class ServerGameTest(
 
     /** Plays the test once; the violations it tolerated, or what made it fail. */
     private fun attempt(context: ClientGameTestContext, attempt: Int): Result<Violations> {
-        val anticheats = GameTestEnvironment.anticheats
+        val anticheats = if (integrated) emptySet() else GameTestEnvironment.anticheats
         val prefix = "GT${anticheats.map(Anticheat::letter).joinToString("")}_"
         val playerName = prefix + randomName(MAX_NAME_LENGTH - prefix.length)
         val account = context.computeOnClient<OfflineAccount, RuntimeException> {
             OfflineAccount.switch(it, playerName)
         }
         val log = if (attempt == 1) "$name.log" else "$name-$attempt.log"
-        val server = ServerSession(context, Path("gametest", log))
+        val server = ServerSession(context, Path("gametest", log), integrated)
         context.runOnClient<RuntimeException> { ControlChannel.session = server }
         ClientErrors.reset()
         return try {

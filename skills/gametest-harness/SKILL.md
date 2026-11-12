@@ -32,6 +32,13 @@ override. The server's state is the truth; the client only predicts.
 No token and no address: every `ServerGameTest` is skipped with one log line. `-Dgametest.only=A,B` runs the
 classes `AGameTest` and `BGameTest` only. Bots of one token: at most 5 at a time.
 
+`override val integrated = true` puts a test in a singleplayer world of the client's integrated server instead:
+same scope, `TestWorld` and commands (run as a console like the session's, feedback in `server.console`, the
+server's log lines naming the player as `log` lines), but `anticheats` is empty and nothing flags. Use it for
+modules that send nothing an anticheat judges (finders, ESP, HUD, chat, commands); keep movement, combat,
+interaction and inventory on the server. These run only while `GAMETEST_SERVER_ANTICHEAT` is unset, token or not.
+`leave`/`join` close and reopen the world, `drop` closes it like a stopping server.
+
 ## Anatomy
 
 ```kotlin

@@ -14,13 +14,15 @@ object GameTestResults {
     private var skipped = false
     private var announced = false
 
-    internal fun passed(test: String, attempts: Int, started: Long, violations: Violations) =
-        record(Outcome(test, attempts, System.nanoTime() - started, violations, null))
+    private const val CLIENT_TESTS = "Client game tests"
+
+    internal fun passed(test: String, attempts: Int, started: Long, violations: Violations, integrated: Boolean) =
+        record(Outcome(test, attempts, System.nanoTime() - started, violations, null), integrated)
 
     internal fun retrying(test: String, attempt: Int, failure: Throwable) = Console.retrying(test, attempt, failure)
 
-    internal fun failed(test: String, attempts: Int, started: Long, failure: Throwable) =
-        record(Outcome(test, attempts, System.nanoTime() - started, Violations.NONE, failure))
+    internal fun failed(test: String, attempts: Int, started: Long, failure: Throwable, integrated: Boolean) =
+        record(Outcome(test, attempts, System.nanoTime() - started, Violations.NONE, failure), integrated)
 
     internal fun skipped() {
         if (!skipped) {
@@ -34,21 +36,25 @@ object GameTestResults {
      * the run on its own, so the failure is thrown on.
      */
     fun local(test: String, block: () -> Unit) {
-        announce("Client game tests")
+        announce(CLIENT_TESTS)
         val started = System.nanoTime()
         try {
             block()
         } catch (failure: Throwable) {
-            record(Outcome(test, 1, System.nanoTime() - started, Violations.NONE, failure))
+            record(Outcome(test, 1, System.nanoTime() - started, Violations.NONE, failure), true)
             throw failure
         }
-        record(Outcome(test, 1, System.nanoTime() - started, Violations.NONE, null))
+        record(Outcome(test, 1, System.nanoTime() - started, Violations.NONE, null), true)
     }
 
-    private fun record(outcome: Outcome) {
+    private fun record(outcome: Outcome, client: Boolean) {
         announce(
-            "Server game tests on ${GameTestEnvironment.address}, watched by " +
-                GameTestEnvironment.anticheats.joinToString { it.name.lowercase() }
+            if (client) {
+                CLIENT_TESTS
+            } else {
+                "Server game tests on ${GameTestEnvironment.address}, watched by " +
+                    GameTestEnvironment.anticheats.joinToString { it.name.lowercase() }
+            }
         )
         outcomes += outcome
         Console.outcome(outcome)

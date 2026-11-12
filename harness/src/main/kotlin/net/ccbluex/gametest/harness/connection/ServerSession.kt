@@ -5,7 +5,16 @@ import com.google.gson.JsonParser
 import net.ccbluex.gametest.harness.verdict.ConsoleLine
 import net.ccbluex.gametest.harness.verdict.ServerReport
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext
+import net.fabricmc.fabric.api.client.gametest.v1.context.TestServerContext
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking
+import net.minecraft.commands.CommandResultCallback
+import net.minecraft.commands.CommandSource
+import net.minecraft.commands.CommandSourceStack
+import net.minecraft.network.chat.Component
+import net.minecraft.server.MinecraftServer
+import net.minecraft.server.permissions.LevelBasedPermissionSet
+import net.minecraft.world.phys.Vec2
+import net.minecraft.world.phys.Vec3
 import org.apache.logging.log4j.LogManager
 import java.nio.file.Path
 import java.time.LocalTime
@@ -20,11 +29,16 @@ import kotlin.io.path.writeText
 /**
  * A test's session on the game test server, driven through its console the way an admin would. Everything the
  * server sends about the session lands in [console], in order, and in the file [log] together with what the
- * harness sent.
+ * harness sent. An [integrated] session runs its commands on the client's integrated server instead, as a console
+ * like the game test server's, and hears from it the same way.
  */
-class ServerSession internal constructor(private val context: ClientGameTestContext, val log: Path) {
+class ServerSession internal constructor(
+    private val context: ClientGameTestContext,
+    val log: Path,
+    internal val integrated: Boolean,
+) {
 
-    val address = GameTestEnvironment.address
+    val address = if (integrated) "the integrated server" else GameTestEnvironment.address
 
     val console: List<ConsoleLine>
         get() = lines
@@ -43,6 +57,10 @@ class ServerSession internal constructor(private val context: ClientGameTestCont
     internal var closed = false
         private set
 
+    /** The integrated server while the session's world is open on it. */
+    @Volatile
+    internal var integratedServer: TestServerContext? = null
+
     private val lines = CopyOnWriteArrayList<ConsoleLine>()
     private val results = ConcurrentHashMap<Int, Int>()
     private val commands = AtomicInteger()
@@ -55,11 +73,29 @@ class ServerSession internal constructor(private val context: ClientGameTestCont
     /** Runs [command] as the session's console and returns its id. Its feedback follows as console lines. */
     fun run(command: String): Int {
         val id = commands.incrementAndGet()
-        send("command") {
-            addProperty("id", id)
-            addProperty("line", command)
+        val integratedServer = integratedServer
+        if (integratedServer == null) {
+            send("command") {
+                addProperty("id", id)
+                addProperty("line", command)
+            }
+        } else {
+            record("> #$id $command")
+            integratedServer.runOnServer<RuntimeException> { perform(it, id, command) }
         }
         return id
+    }
+
+    /** Runs [command] like the game test server runs a session's: a console at the overworld's origin. */
+    private fun perform(server: MinecraftServer, id: Int, command: String) {
+        val console = IntegratedConsole(id)
+        val source = CommandSourceStack(
+            console, Vec3.ZERO, Vec2.ZERO, server.overworld(), LevelBasedPermissionSet.GAMEMASTER,
+            Component.literal("Server"), server,
+        ).withCallback(console)
+        server.commands.performPrefixedCommand(source, command)
+        results[id] = console.result
+        record("< #$id done: ${console.result}")
     }
 
     /** What command [id] returned, once it is done: Brigadier's result, 0 when it failed. */
@@ -119,6 +155,9 @@ class ServerSession internal constructor(private val context: ClientGameTestCont
         }
     }
 
+    /** A line of the integrated server's log that names the player, as the game test server forwards them. */
+    internal fun log(level: String, text: String) = add(ConsoleLine(level, text))
+
     private fun add(line: ConsoleLine) {
         record("< $line")
         lines += line
@@ -129,6 +168,35 @@ class ServerSession internal constructor(private val context: ClientGameTestCont
 
     private companion object {
         val logger = LogManager.getLogger("GameTest")
+    }
+
+    /** Hears what command [id] says and counts what it returns, like the game test server's session console. */
+    private inner class IntegratedConsole(private val id: Int) : CommandSource, CommandResultCallback {
+
+        private var results = 0
+        private var successes = 0
+        private var lastResult = 0
+
+        /** Brigadier's return value: what the command returned, or how many of its forks succeeded. */
+        val result get() = if (results == 1) lastResult else successes
+
+        override fun sendSystemMessage(message: Component) =
+            message.string.lines().forEach { add(ConsoleLine("", it, command = id)) }
+
+        override fun acceptsSuccess() = true
+
+        override fun acceptsFailure() = true
+
+        override fun shouldInformAdmins() = false
+
+        override fun onResult(success: Boolean, result: Int) {
+            results++
+            if (success) {
+                successes++
+                lastResult = result
+            }
+        }
+
     }
 
     @Synchronized

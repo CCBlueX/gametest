@@ -31,6 +31,9 @@ object GameTestEnvironment {
     /** Server game tests run with a token for the public server, or against a server of one's own. */
     val enabled = token != null || ownServer != null
 
+    /** Tests on the integrated server run while no anticheat is picked, so CI gives them a job of their own. */
+    internal val integrated = variable("GAMETEST_SERVER_ANTICHEAT") == null
+
     /** Shown to spectators next to a running test. */
     internal val repository: String? = variable("GITHUB_REPOSITORY")
 

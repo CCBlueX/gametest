@@ -1,8 +1,10 @@
 package net.ccbluex.gametest.harness
 
 import net.ccbluex.gametest.harness.action.teleport
+import net.ccbluex.gametest.harness.connection.Entrance
 import net.ccbluex.gametest.harness.connection.ServerEntrance
 import net.ccbluex.gametest.harness.connection.ServerSession
+import net.ccbluex.gametest.harness.connection.SingleplayerEntrance
 import net.ccbluex.gametest.harness.verdict.ConsoleLine
 import net.ccbluex.gametest.harness.verdict.ServerReport
 import net.ccbluex.gametest.harness.verdict.Verdict
@@ -16,7 +18,8 @@ import net.minecraft.world.level.Level
 /**
  * What a server game test works with: the client, driven through real input, and its session on the game test
  * server, driven through the session's console like an admin would. The server's state is the truth; the client
- * only shows its prediction. Actions on either side live in the `action` package.
+ * only shows its prediction. Actions on either side live in the `action` package. A test that asked for the
+ * integrated server gets a singleplayer world instead, driven the same way and watched by nothing.
  */
 @Suppress("TooManyFunctions")
 class GameTestScope internal constructor(
@@ -25,7 +28,10 @@ class GameTestScope internal constructor(
     private val world: TestWorld,
     /** The name this test plays under, a fresh one for every test. */
     val playerName: String,
-    /** What watches the player, so that a test can expect what only some anticheats catch. */
+    /**
+     * What watches the player, so that a test can expect what only some anticheats catch. Nothing does on the
+     * integrated server.
+     */
     val anticheats: Set<Anticheat>,
     test: String,
 ) : AutoCloseable {
@@ -40,10 +46,11 @@ class GameTestScope internal constructor(
 
     internal val verdict = Verdict(server)
 
-    private val warmupTicks = anticheats.maxOf { it.warmupTicks }
-    private val teleportGraceTicks = anticheats.maxOf { it.teleportGraceTicks }
+    private val warmupTicks = anticheats.maxOfOrNull { it.warmupTicks } ?: 0
+    private val teleportGraceTicks = anticheats.maxOfOrNull { it.teleportGraceTicks } ?: 0
 
-    private val entrance = ServerEntrance(this, world, test)
+    private val entrance: Entrance =
+        if (server.integrated) SingleplayerEntrance(this, world) else ServerEntrance(this, world, test)
     private var prepared = false
     private var joined = false
 
@@ -140,12 +147,12 @@ class GameTestScope internal constructor(
     /**
      * Has the server disconnect the player the way a stopping server does, which is as close as a test on a
      * shared server gets to `stop`. The client is left on its disconnect screen and the session waits a
-     * minute for [join].
+     * minute for [join]. On the integrated server the world closes and [join] opens it again.
      */
     fun drop() {
         val since = server.console.size
         joined = false
-        server.send("drop")
+        entrance.drop()
         awaitConsole("the server to drop the player", since) { it.report == ServerReport.QUIT }
         // The connection ends on a network thread, the game notices on its next tick
         awaitClient("the client to notice the drop") { it.level == null }
@@ -154,21 +161,12 @@ class GameTestScope internal constructor(
 
     /** Connects and enters the session at [origin]: a new one first, the one left behind afterwards. */
     fun join() {
-        entrance.connect(if (prepared) REJOIN_PATIENCE else FIRST_JOIN_PATIENCE)
+        entrance.connect(prepared)
         val connected = System.nanoTime()
         joined = true
         // Opening the session moves the player out of the lobby, the first leg of the trip to the origin
         val since = server.console.size
-        val ready = entrance.open()
-        check(ready["resumed"].asBoolean == prepared) {
-            if (prepared) "The session did not outlast the reconnect" else "The server resumed a session of $playerName"
-        }
-        // One description per anticheat, such as `GrimAC 2.3.75, Intave 14.8.4`
-        val described = ready["anticheat"].asString.split(", ")
-        val missing = anticheats.filter { anticheat -> described.none(anticheat::describes) }
-        check(missing.isEmpty()) {
-            "The server watches $playerName with ${ready["anticheat"].asString}, not ${missing.joinToString()}"
-        }
+        entrance.open(prepared)
         if (!prepared) {
             GAME_RULES.forEach { run("gamerule $it") }
             run("time set day")
@@ -188,15 +186,7 @@ class GameTestScope internal constructor(
     override fun close() {
         if (joined) {
             ticks(20)
-            if (server.connected) {
-                server.send("close")
-                // A server drops what a player who is gone still had queued, so the quit waits for the answer
-                repeat(CLOSE_TIMEOUT) {
-                    if (!server.closed && server.connected) {
-                        ticks(1)
-                    }
-                }
-            }
+            entrance.end()
         }
         leave()
     }
@@ -232,12 +222,8 @@ class GameTestScope internal constructor(
         const val DEFAULT_TIMEOUT = 200
         internal const val SETTLE_ATTEMPTS = 10
         private val CORRECTIONS = setOf(ServerReport.SETBACK, ServerReport.FAILMOVE)
-        internal const val CLOSE_TIMEOUT = 40
         internal const val COMMAND_TIMEOUT = 100
         internal const val NANOS_PER_TICK = 50_000_000L
-        // The server restarts once a day; a test that meets the restart waits for it
-        internal const val FIRST_JOIN_PATIENCE = 120
-        internal const val REJOIN_PATIENCE = 30
         internal val GAME_RULES = listOf(
             "minecraft:advance_time false",
             "minecraft:advance_weather false",

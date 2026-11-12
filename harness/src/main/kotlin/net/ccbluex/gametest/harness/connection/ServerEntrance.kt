@@ -19,6 +19,10 @@ private const val OPEN_TIMEOUT = 20 * 60
 private const val RETRY_TICKS = 100
 private const val BUSY_PATIENCE = 180
 private const val BOT_LIMIT_PATIENCE = 600
+private const val CLOSE_TIMEOUT = 40
+// The server restarts once a day; a test that meets the restart waits for it
+private const val FIRST_JOIN_PATIENCE = 120
+private const val REJOIN_PATIENCE = 30
 
 // How the proxy turns away a bot whose token already runs as many bots as it may
 private const val BOT_LIMIT = "wait for one to finish"
@@ -40,16 +44,51 @@ internal class ServerEntrance(
     private val scope: GameTestScope,
     private val world: TestWorld,
     private val test: String,
-) {
+) : Entrance {
 
     private val logger = LogManager.getLogger("GameTest")
     private val server = scope.server
+
+    override fun connect(resume: Boolean) = connect(if (resume) REJOIN_PATIENCE else FIRST_JOIN_PATIENCE)
+
+    override fun open(resume: Boolean) {
+        val ready = open()
+        check(ready["resumed"].asBoolean == resume) {
+            if (resume) "The session did not outlast the reconnect"
+            else "The server resumed a session of ${scope.playerName}"
+        }
+        // One description per anticheat, such as `GrimAC 2.3.75, Intave 14.8.4`
+        val described = ready["anticheat"].asString.split(", ")
+        val missing = scope.anticheats.filter { anticheat -> described.none(anticheat::describes) }
+        check(missing.isEmpty()) {
+            "The server watches ${scope.playerName} with ${ready["anticheat"].asString}, not ${missing.joinToString()}"
+        }
+    }
+
+    override fun end() {
+        if (server.connected) {
+            server.send("close")
+            // A server drops what a player who is gone still had queued, so the quit waits for the answer
+            repeat(CLOSE_TIMEOUT) {
+                if (!server.closed && server.connected) {
+                    scope.ticks(1)
+                }
+            }
+        }
+    }
+
+    override fun drop() = server.send("drop")
+
+    override fun leave() {
+        scope.client { it.returnToTitle() }
+        scope.awaitClient("the client to leave") { it.level == null && it.gui.screen() is TitleScreen }
+    }
 
     /**
      * Joins the server, trying again for [patience] seconds while it refuses, and for [BOT_LIMIT_PATIENCE] while
      * the token's other bots fill its share of the server.
      */
-    fun connect(patience: Int) {
+    private fun connect(patience: Int) {
         val start = System.nanoTime()
         while (true) {
             val refusal = attempt() ?: return
@@ -60,11 +99,6 @@ internal class ServerEntrance(
             logger.info("Could not join {} yet, trying again: {}", server.address, refusal)
             scope.ticks(RETRY_TICKS)
         }
-    }
-
-    fun leave() {
-        scope.client { it.returnToTitle() }
-        scope.awaitClient("the client to leave") { it.level == null && it.gui.screen() is TitleScreen }
     }
 
     /** Returns what the disconnect screen says if the client did not get in. */
@@ -82,7 +116,7 @@ internal class ServerEntrance(
     }
 
     /** Asks for the session until the server has room for it, and returns the server's `ready`. */
-    fun open(): JsonObject {
+    private fun open(): JsonObject {
         val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(BUSY_PATIENCE.toLong())
         while (true) {
             val answer = ask()
