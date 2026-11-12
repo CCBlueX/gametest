@@ -18,6 +18,10 @@ private const val JOIN_TIMEOUT = 20 * 60
 private const val OPEN_TIMEOUT = 20 * 60
 private const val RETRY_TICKS = 100
 private const val BUSY_PATIENCE = 180
+private const val BOT_LIMIT_PATIENCE = 600
+
+// How the proxy turns away a bot whose token already runs as many bots as it may
+private const val BOT_LIMIT = "wait for one to finish"
 
 /** Back to the title screen, from a server the way the pause menu leaves it. */
 internal fun Minecraft.returnToTitle() {
@@ -41,12 +45,16 @@ internal class ServerEntrance(
     private val logger = LogManager.getLogger("GameTest")
     private val server = scope.server
 
-    /** Joins the server, trying again for [patience] seconds while it refuses. */
+    /**
+     * Joins the server, trying again for [patience] seconds while it refuses, and for [BOT_LIMIT_PATIENCE] while
+     * the token's other bots fill its share of the server.
+     */
     fun connect(patience: Int) {
-        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(patience.toLong())
+        val start = System.nanoTime()
         while (true) {
             val refusal = attempt() ?: return
-            if (System.nanoTime() > deadline) {
+            val waited = TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - start)
+            if (waited > if (BOT_LIMIT in refusal) BOT_LIMIT_PATIENCE else patience) {
                 throw AssertionError("Could not join ${server.address}: $refusal")
             }
             logger.info("Could not join {} yet, trying again: {}", server.address, refusal)
