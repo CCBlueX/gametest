@@ -48,3 +48,10 @@ class Verdict(private val server: ServerSession) {
     }
 
 }
+
+/** What an attempt that passed was let off with: its violation level and every line behind it. */
+class Violations(val level: Int, val lines: List<String>) {
+    companion object {
+        val NONE = Violations(0, emptyList())
+    }
+}

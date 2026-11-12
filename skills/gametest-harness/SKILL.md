@@ -102,8 +102,9 @@ is not a bug (network services unreachable on CI and the like). Never to hide a 
 ## Reading a failure
 
 ```text
-(GameTest) AutoJump failed
-java.lang.IllegalStateException: violation level 6 above 5, see gametest/AutoJump-3.log
+↻ AutoJump                       attempt 1 failed: violation level 6 above 5, see gametest/AutoJump.log
+✗ AutoJump                       41.2s · attempt 3
+    violation level 6 above 5, see gametest/AutoJump-3.log
   FLAG GrimAC Simulation 0.0 5.001882
   SETBACK GrimAC 0.5 -60.0 2.5171820022762335
   FLAG GrimAC GroundSpoof 0.0 claimed true
@@ -114,7 +115,8 @@ java.lang.IllegalStateException: violation level 6 above 5, see gametest/AutoJum
 timestamps. FLAG is `<anticheat> <check> <violations> <details>`; the check name says what the anticheat thinks
 happened: movement physics, interaction geometry (reach, hitboxes), packet content and order, inventory clicks. NOTE
 is a flag of a check the anticheat calls experimental: logged as a warning, never a failure.
-`build/run/clientGameTest/logs/latest.log` is the client.
+`build/run/clientGameTest/logs/latest.log` is the client; on CI the console shows only the test lines
+(`-Dgametest.console=all` for everything).
 
 Common causes: a command sent right before the test ended (the harness waits for answers, but not for effects),
 a fixture not yet loaded on the client, a module acting in the same tick it turned, two tests using the same

@@ -59,6 +59,10 @@ A test passes with up to `violationLevel` (5) flags, corrections and errors, and
 
 Without a token or an address the tests are skipped. `-Dgametest.only=AutoShearer,Harness` runs only those.
 
+The console shows a line per test; on GitHub Actions (or with `-Dgametest.console=tests`) nothing else, with
+failures as annotations and a table in the job summary. `-Dgametest.console=all` keeps the whole client log there;
+`logs/latest.log` always has it.
+
 ## The public server
 
 `test.ccbluex.net` lets bots in that show a ticket from the LiquidBounce API, which the harness gets with its

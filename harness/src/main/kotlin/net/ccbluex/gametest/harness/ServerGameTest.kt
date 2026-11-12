@@ -9,10 +9,10 @@ import net.ccbluex.gametest.harness.verdict.ClientErrors
 import net.ccbluex.gametest.harness.verdict.ConsoleLine
 import net.ccbluex.gametest.harness.verdict.ServerReport
 import net.ccbluex.gametest.harness.verdict.Verdict
+import net.ccbluex.gametest.harness.verdict.Violations
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext
 import net.minecraft.client.gui.screens.TitleScreen
-import org.apache.logging.log4j.LogManager
 import java.util.concurrent.ThreadLocalRandom
 import kotlin.io.path.Path
 
@@ -56,19 +56,23 @@ abstract class ServerGameTest(
             return
         }
 
+        val started = System.nanoTime()
         val attempts = retries + 1
         for (attempt in 1..attempts) {
-            val failure = attempt(context, attempt) ?: return GameTestResults.passed(name, attempt)
-            if (attempt == attempts) {
-                GameTestResults.failed(name, failure)
-            } else {
-                GameTestResults.retrying(name, attempt, failure)
-            }
+            attempt(context, attempt)
+                .onSuccess { tolerated -> return GameTestResults.passed(name, attempt, started, tolerated) }
+                .onFailure { failure ->
+                    if (attempt == attempts) {
+                        GameTestResults.failed(name, attempt, started, failure)
+                    } else {
+                        GameTestResults.retrying(name, attempt, failure)
+                    }
+                }
         }
     }
 
-    /** Plays the test once; what made it fail, or null. */
-    private fun attempt(context: ClientGameTestContext, attempt: Int): Throwable? {
+    /** Plays the test once; the violations it tolerated, or what made it fail. */
+    private fun attempt(context: ClientGameTestContext, attempt: Int): Result<Violations> {
         val anticheats = GameTestEnvironment.anticheats
         val prefix = "GT${anticheats.map(Anticheat::letter).joinToString("")}_"
         val playerName = prefix + randomName(MAX_NAME_LENGTH - prefix.length)
@@ -86,10 +90,9 @@ abstract class ServerGameTest(
                 it.join()
                 it.body()
             }
-            judge(scope.verdict.violations(), ClientErrors.lines, server)
-            null
+            Result.success(judge(scope.verdict.violations(), ClientErrors.lines, server))
         } catch (failure: Throwable) {
-            failure
+            Result.failure(failure)
         } finally {
             // The runner ends the whole run if a test does not end on the title screen
             context.runOnClient<RuntimeException> {
@@ -101,20 +104,18 @@ abstract class ServerGameTest(
         }
     }
 
-    private fun judge(violations: List<ConsoleLine>, clientErrors: List<String>, server: ServerSession) {
+    private fun judge(violations: List<ConsoleLine>, clientErrors: List<String>, server: ServerSession): Violations {
         val fatal = violations.filter { Verdict.isFatal(it) }
         check(fatal.isEmpty()) {
             "the server objected ${fatal.size} time(s) beyond any tolerance, see ${server.log}\n" +
                 fatal.joinToString("\n") { "  $it" }
         }
         val level = violations.count { it.report != ServerReport.SETBACK } + clientErrors.size
+        val all = violations.map(ConsoleLine::toString) + clientErrors
         check(level <= violationLevel) {
-            "violation level $level above $violationLevel, see ${server.log}\n" +
-                (violations.map(ConsoleLine::toString) + clientErrors).joinToString("\n") { "  $it" }
+            "violation level $level above $violationLevel, see ${server.log}\n" + all.joinToString("\n") { "  $it" }
         }
-        if (level > 0) {
-            GameTestResults.tolerated(name, level, violations.map(ConsoleLine::toString) + clientErrors)
-        }
+        return Violations(level, all)
     }
 
     /** Waits until the client may join a server; the title screen unless the mod has more to wait for. */
@@ -144,62 +145,4 @@ abstract class ServerGameTest(
         const val VIOLATION_LEVEL = 5
     }
 
-}
-
-/** Collects every test's outcome so one failure does not hide the others; [ResultsGameTest] reports them. */
-object GameTestResults {
-
-    private val logger = LogManager.getLogger("GameTest")
-    private val failures = linkedMapOf<String, Throwable>()
-    private var passed = 0
-    private var retried = 0
-    private var skipped = false
-
-    internal fun passed(test: String, attempt: Int) {
-        passed++
-        if (attempt > 1) {
-            retried++
-            logger.info("{} passed on attempt {}", test, attempt)
-        } else {
-            logger.info("{} passed", test)
-        }
-    }
-
-    // WARN, not ERROR: the next attempt counts every ERROR the client logs against itself
-    internal fun retrying(test: String, attempt: Int, failure: Throwable) {
-        logger.warn("{} failed attempt {}, trying again", test, attempt, failure)
-    }
-
-    internal fun tolerated(test: String, level: Int, violations: List<String>) {
-        logger.warn("{} reached violation level {}:\n{}", test, level, violations.joinToString("\n") { "  $it" })
-    }
-
-    internal fun failed(test: String, failure: Throwable) {
-        failures[test] = failure
-        logger.error("{} failed", test, failure)
-    }
-
-    internal fun skipped() {
-        if (!skipped) {
-            skipped = true
-            logger.info("Skipping the server game tests: neither GAMETEST_API_TOKEN nor GAMETEST_SERVER_ADDRESS is set")
-        }
-    }
-
-    fun assertAllPassed() {
-        if (passed == 0 && failures.isEmpty()) {
-            return
-        }
-        logger.info("{} server game test(s) passed ({} on a retry), {} failed", passed, retried, failures.size)
-        if (failures.isNotEmpty()) {
-            throw AssertionError(failures.entries.joinToString("\n") { (test, failure) -> "$test: ${failure.message}" })
-                .apply { failures.values.forEach(::addSuppressed) }
-        }
-    }
-
-}
-
-/** Fails the run if a server game test failed. Register it after every [ServerGameTest] of the mod. */
-class ResultsGameTest : FabricClientGameTest {
-    override fun runTest(context: ClientGameTestContext) = GameTestResults.assertAllPassed()
 }
