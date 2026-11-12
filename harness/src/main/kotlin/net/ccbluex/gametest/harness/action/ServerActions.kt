@@ -10,6 +10,9 @@ import net.minecraft.world.level.Level
 
 private const val RETRY_INTERVAL = 10
 
+/** How long a stalled server may take to answer the last question before it counts as a no. */
+private const val ANSWER_PATIENCE = 200
+
 private val BlockPos.command get() = "$x $y $z"
 
 fun GameTestScope.setBlock(pos: BlockPos, block: String) = run("setblock ${pos.command} $block")
@@ -57,14 +60,28 @@ fun GameTestScope.query(command: String, answer: Regex, timeout: Int = DEFAULT_T
 fun GameTestScope.awaitServer(condition: String, timeout: Int = DEFAULT_TIMEOUT) =
     awaitAnswer("execute if $condition", "Test passed", timeout)
 
-/** Asks the server [command] every half second until its feedback contains [expected]. */
+/**
+ * Asks the server [command] every half second until its feedback contains [expected]. Questions are judged by the
+ * server's answer, however late it comes: a server that stalls for a second answers them all at once.
+ */
 fun GameTestScope.awaitAnswer(command: String, expected: String, timeout: Int = DEFAULT_TIMEOUT) {
-    repeat(timeout / RETRY_INTERVAL) {
-        val id = run(command)
+    val asked = HashSet<Int>()
+    fun answered() = server.console.any { it.command in asked && expected in it.message }
+    repeat(maxOf(1, timeout / RETRY_INTERVAL)) {
+        asked += run(command)
         ticks(RETRY_INTERVAL)
-        if (server.console.any { it.command == id && expected in it.message }) {
+        if (answered()) {
             return
         }
     }
-    throw AssertionError("The server never answered '$command' with '$expected', see ${server.log}")
+    val last = asked.max()
+    for (tick in 0 until ANSWER_PATIENCE) {
+        if (server.result(last) != null) {
+            break
+        }
+        ticks(1)
+    }
+    if (!answered()) {
+        throw AssertionError("The server never answered '$command' with '$expected', see ${server.log}")
+    }
 }
