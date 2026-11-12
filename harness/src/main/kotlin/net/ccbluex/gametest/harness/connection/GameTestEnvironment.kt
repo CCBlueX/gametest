@@ -25,6 +25,9 @@ object GameTestEnvironment {
         ?.takeIf(Set<Anticheat>::isNotEmpty)
         ?: setOf(Anticheat.GRIM)
 
+    /** Whether Paper's own movement checks are all that watch the bots. */
+    val paperOnly = anticheats.singleOrNull() == Anticheat.VANILLA
+
     /** Server game tests run with a token for the public server, or against a server of one's own. */
     val enabled = token != null || ownServer != null
 

@@ -58,7 +58,8 @@ Scope (`GameTestScope`, the receiver of the test body):
 - `origin`: where the bot starts, looking south. FLAT: grass at y -61, origin (0, -60, 0). `TestWorld.VOID`: stone
   platform, origin (0, 64, 0). `TestWorld.generated(seed, structures)`: real terrain, sealed glass room at (0, -40, 0).
   `TestWorld.generated(seed, origin) { prepare }`: real terrain with a start the test builds itself.
-- `playerName`, `anticheats` (`Set<Anticheat>`): branch on it when only some anticheats catch something.
+- `playerName`, `anticheats` (`Set<Anticheat>`): branch on it when only some anticheats catch something;
+  `paperOnly` when no anticheat but Paper's own checks watches (also on `GameTestEnvironment`).
 - `client { minecraft -> }`: run on the client thread and return a value. Never block inside it.
 - `ticks(n)`, `awaitClient(what, timeout) { minecraft -> condition }`.
 - `input`: Fabric `TestInput` (`holdKey { it.keyUp }`, `releaseKey`, `pressKey`, `lookAt`, `typeChars`, mouse).

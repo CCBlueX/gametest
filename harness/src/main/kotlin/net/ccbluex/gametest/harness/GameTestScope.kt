@@ -30,6 +30,9 @@ class GameTestScope internal constructor(
     test: String,
 ) : AutoCloseable {
 
+    /** Whether Paper's own movement checks are all that watch the player. */
+    val paperOnly = anticheats.singleOrNull() == Anticheat.VANILLA
+
     /** Where the test starts, looking south: the grass of the superflat world unless it asked for another. */
     val origin = world.origin
 
