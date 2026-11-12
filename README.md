@@ -31,7 +31,7 @@ repositories {
 
 dependencies {
     // In the client game test source set that fabricApi.configureTests creates
-    "gametestImplementation"("net.ccbluex:gametest-harness:1.0.0+26.3")
+    "gametestImplementation"("net.ccbluex:gametest-harness:1.0.3+26.3")
 }
 ```
 
@@ -51,7 +51,7 @@ last. Override `awaitClient`, `beforeJoin` and `afterTest` of `ServerGameTest` t
 
 | Variable | Meaning |
 | --- | --- |
-| `GAMETEST_API_TOKEN` | A LiquidBounce API token, the one used to publish on the marketplace. Needed for the public server. |
+| `GAMETEST_API_TOKEN` | The API token from your [LiquidBounce account](https://liquidbounce.net/account). Needed for the public server. |
 | `GAMETEST_SERVER_ANTICHEAT` | Which [anticheat](docs/anticheats.md) watches the bots. |
 | `GAMETEST_SERVER_ADDRESS` | Another server, such as `localhost:25565`; then no token is needed. |
 
@@ -82,8 +82,8 @@ docker compose up --build
 GAMETEST_SERVER_ADDRESS=localhost:25565 ./gradlew runClientGameTest   # in the mod
 ```
 
-Starting it means agreeing to the [Minecraft EULA](https://aka.ms/MinecraftEULA). It has the freely available
-anticheats.
+Starting it means agreeing to the [Minecraft EULA](https://aka.ms/MinecraftEULA). It downloads Grim and Intave; the paid
+anticheats are only on the public server.
 
 ## License
 

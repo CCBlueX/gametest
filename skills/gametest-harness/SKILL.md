@@ -23,7 +23,7 @@ names the bot, or an ERROR the client logged. The server's state is the truth; t
 
 | Variable | Meaning |
 | --- | --- |
-| `GAMETEST_API_TOKEN` | LiquidBounce API token (marketplace publishing token). Needed for `test.ccbluex.net`. |
+| `GAMETEST_API_TOKEN` | LiquidBounce API token from https://liquidbounce.net/account. Needed for `test.ccbluex.net`. |
 | `GAMETEST_SERVER_ANTICHEAT` | One of the values in docs/anticheats.md of CCBlueX/gametest. CI runs one job per anticheat. |
 | `GAMETEST_SERVER_ADDRESS` | Own server, such as `localhost:25565` from `docker compose up` in CCBlueX/gametest. |
 
@@ -117,5 +117,5 @@ objective name, a test that expects a flag only one anticheat raises (branch on 
 
 ## Running the server yourself
 
-`docker compose up --build` in [CCBlueX/gametest](https://github.com/CCBlueX/gametest) runs Paper with the freely
-available anticheats on `localhost:25565`; point `GAMETEST_SERVER_ADDRESS` at it.
+`docker compose up --build` in [CCBlueX/gametest](https://github.com/CCBlueX/gametest) runs Paper with Grim and Intave
+on `localhost:25565`; point `GAMETEST_SERVER_ADDRESS` at it.
