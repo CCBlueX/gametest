@@ -6,9 +6,11 @@ description: Write, run and debug Fabric client game tests with net.ccbluex:game
 # Game test harness
 
 A `ServerGameTest` starts the real Minecraft client (Fabric client game test API), joins a Paper server under a
-bot name of its own, gets fresh worlds there, runs the test body, and fails if the server objected to anything:
-an anticheat flag or setback, a movement Paper corrected, a kick, a refused command, a server WARN or ERROR that
-names the bot, or an ERROR the client logged. The server's state is the truth; the client only predicts.
+bot name of its own, gets fresh worlds there and runs the test body. Every anticheat flag or setback, movement Paper
+corrected, server WARN or ERROR that names the bot and ERROR the client logged raises the attempt's violation level;
+above `violationLevel` (3) it fails. A kick, a refused command or a lost connection fails it at once. A failed attempt
+runs again under a new name, up to `retries` (2) times. Both are open properties of `ServerGameTest` a test may
+override. The server's state is the truth; the client only predicts.
 
 ## Setup
 
@@ -92,7 +94,8 @@ is not a bug (network services unreachable on CI and the like). Never to hide a 
   `difficulty`, `gamerule`, `time`, `weather` apply to the session's world only.
 - Scoreboard objectives, teams, bossbars and command storage are shared by every test on the server:
   always `unique(name)`, and match on the returned name in selectors (`scores={${obj}=1..}`).
-- Never weaken the verdict to get a pass. A flag is a finding: fix the client until the server is quiet.
+- Never raise `retries` or `violationLevel` to get a pass. Tolerated flags are logged as `reached violation level`
+  warnings; they are still findings.
 - Command syntax is 26.x: loot conditions dispatch on `type`, item components in brackets
   (`minecraft:shears[damage=1]`), `item replace entity <name> hotbar.0 with ...`.
 
@@ -100,12 +103,14 @@ is not a bug (network services unreachable on CI and the like). Never to hide a 
 
 ```text
 (GameTest) AutoJump failed
-java.lang.IllegalStateException: the server objected 2 time(s), see gametest/AutoJump.log
+java.lang.IllegalStateException: violation level 4 above 3, see gametest/AutoJump-3.log
+  FLAG GrimAC Simulation 1.0 5.000000
+  SETBACK GrimAC 0.5 -60.0 3.21
   FLAG GrimAC Simulation 1.0 5.000000
   SETBACK GrimAC 0.5 -60.0 3.21
 ```
 
-`build/run/clientGameTest/gametest/<Test>.log` has every message the test sent (`>`) and got (`<`) with
+`build/run/clientGameTest/gametest/<Test>.log` (`<Test>-2.log` for the second attempt) has every message the test sent (`>`) and got (`<`) with
 timestamps. FLAG is `<anticheat> <check> <violations> <details>`; the check name says what the anticheat thinks
 happened: movement physics, interaction geometry (reach, hitboxes), packet content and order, inventory clicks. NOTE
 is a flag of a check the anticheat calls experimental: logged as a warning, never a failure.

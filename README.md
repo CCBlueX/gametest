@@ -48,6 +48,8 @@ class AutoShearerGameTest : ServerGameTest({
 
 Register each test as a `fabric-client-gametest` entrypoint, and `net.ccbluex.gametest.harness.ResultsGameTest`
 last. Override `awaitClient`, `beforeJoin` and `afterTest` of `ServerGameTest` to put your mod's state in order.
+A test passes with up to `violationLevel` (3) flags, corrections and errors, and a failed one runs again up to
+`retries` (2) times; both can be overridden per test.
 
 | Variable | Meaning |
 | --- | --- |

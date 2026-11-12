@@ -41,4 +41,10 @@ class Verdict(private val server: ServerSession) {
         (line.report == ServerReport.SETBACK || line.report == ServerReport.FAILMOVE) &&
         excusedCorrections.any { index in it }
 
+    companion object {
+        /** What fails a test however tolerant it is: a kick, a refused command, a connection lost on its own. */
+        fun isFatal(line: ConsoleLine) =
+            line.report == ServerReport.KICK || line.report == ServerReport.ERROR || line.report == ServerReport.QUIT
+    }
+
 }
