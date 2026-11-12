@@ -15,9 +15,9 @@ choice as the letters between `GT` and `_` (`GTIX_...`).
 | [AntiCheatAddition](https://www.spigotmc.org/resources/anticheataddition.33590/), no movement | `anticheataddition` | `A` | yes | no |
 | [FairPlay](https://builtbybit.com/resources/fairplay-combat-anticheat-local-ai.111265/), no movement | `fairplay` | `F` | yes | no |
 
-Whatever any of the bot's anticheats flags or sets back counts against the test's violation level; the others leave
-the bot alone. Some
-check nothing for a moment after a join or a teleport, which the harness waits out, as long as the slowest of them.
+Whatever any of the bot's anticheats flags counts against the test's violation level; the others leave
+the bot alone. Some check nothing for a moment after a join or a teleport, which the harness waits out, as long as the
+slowest of them.
 Several anticheats see the same packets, but the first one to set a move back takes it from the others: a bad move
 watched by Grim and Intave is flagged by Grim alone. Pair anticheats that check different things, such as `intave,mx`.
 

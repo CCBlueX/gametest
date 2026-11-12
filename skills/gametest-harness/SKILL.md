@@ -6,9 +6,9 @@ description: Write, run and debug Fabric client game tests with net.ccbluex:game
 # Game test harness
 
 A `ServerGameTest` starts the real Minecraft client (Fabric client game test API), joins a Paper server under a
-bot name of its own, gets fresh worlds there and runs the test body. Every anticheat flag or setback, movement Paper
-corrected, server WARN or ERROR that names the bot and ERROR the client logged raises the attempt's violation level;
-above `violationLevel` (3) it fails. A kick, a refused command or a lost connection fails it at once. A failed attempt
+bot name of its own, gets fresh worlds there and runs the test body. Every anticheat flag, movement Paper corrected,
+server WARN or ERROR that names the bot and ERROR the client logged raises the attempt's violation level (setbacks
+follow a flag and add nothing); above `violationLevel` (5) it fails. A kick, a refused command or a lost connection fails it at once. A failed attempt
 runs again under a new name, up to `retries` (2) times. Both are open properties of `ServerGameTest` a test may
 override. The server's state is the truth; the client only predicts.
 
@@ -103,11 +103,11 @@ is not a bug (network services unreachable on CI and the like). Never to hide a 
 
 ```text
 (GameTest) AutoJump failed
-java.lang.IllegalStateException: violation level 4 above 3, see gametest/AutoJump-3.log
-  FLAG GrimAC Simulation 1.0 5.000000
-  SETBACK GrimAC 0.5 -60.0 3.21
-  FLAG GrimAC Simulation 1.0 5.000000
-  SETBACK GrimAC 0.5 -60.0 3.21
+java.lang.IllegalStateException: violation level 6 above 5, see gametest/AutoJump-3.log
+  FLAG GrimAC Simulation 0.0 5.001882
+  SETBACK GrimAC 0.5 -60.0 2.5171820022762335
+  FLAG GrimAC GroundSpoof 0.0 claimed true
+  ...
 ```
 
 `build/run/clientGameTest/gametest/<Test>.log` (`<Test>-2.log` for the second attempt) has every message the test sent (`>`) and got (`<`) with

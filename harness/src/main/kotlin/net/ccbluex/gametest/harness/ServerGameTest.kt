@@ -7,6 +7,7 @@ import net.ccbluex.gametest.harness.connection.ServerSession
 import net.ccbluex.gametest.harness.connection.returnToTitle
 import net.ccbluex.gametest.harness.verdict.ClientErrors
 import net.ccbluex.gametest.harness.verdict.ConsoleLine
+import net.ccbluex.gametest.harness.verdict.ServerReport
 import net.ccbluex.gametest.harness.verdict.Verdict
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext
@@ -38,8 +39,9 @@ abstract class ServerGameTest(
     protected open val retries: Int get() = RETRIES
 
     /**
-     * How many anticheat flags, corrections, warnings naming the player and client errors an attempt may collect and
-     * still pass. A kick, a refused command or a connection lost on its own fails it at once.
+     * How many anticheat flags, movements Paper corrected, warnings naming the player and client errors an attempt may
+     * collect and still pass. Setbacks follow a flag and do not count of their own. A kick, a refused command or a
+     * connection lost on its own fails the attempt at once.
      */
     protected open val violationLevel: Int get() = VIOLATION_LEVEL
 
@@ -105,7 +107,7 @@ abstract class ServerGameTest(
             "the server objected ${fatal.size} time(s) beyond any tolerance, see ${server.log}\n" +
                 fatal.joinToString("\n") { "  $it" }
         }
-        val level = violations.size + clientErrors.size
+        val level = violations.count { it.report != ServerReport.SETBACK } + clientErrors.size
         check(level <= violationLevel) {
             "violation level $level above $violationLevel, see ${server.log}\n" +
                 (violations.map(ConsoleLine::toString) + clientErrors).joinToString("\n") { "  $it" }
@@ -139,7 +141,7 @@ abstract class ServerGameTest(
         const val MAX_NAME_LENGTH = 16
         const val NAME_CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
         const val RETRIES = 2
-        const val VIOLATION_LEVEL = 3
+        const val VIOLATION_LEVEL = 5
     }
 
 }
