@@ -32,6 +32,8 @@ abstract class ServerGameTest(
     private val name = javaClass.simpleName.removeSuffix("GameTest")
 
     final override fun runTest(context: ClientGameTestContext) {
+        // The runner fails a test that ends off the title screen, a mod's startup screen included, skipped or not
+        awaitClient(context)
         if (!GameTestEnvironment.enabled) {
             GameTestResults.skipped()
             return
@@ -40,7 +42,6 @@ abstract class ServerGameTest(
             return
         }
 
-        awaitClient(context)
         val anticheat = GameTestEnvironment.anticheat
         val playerName = "GT${anticheat.letter}_${randomName()}"
         val account = context.computeOnClient<OfflineAccount, RuntimeException> {
