@@ -96,9 +96,12 @@ public final class Sessions implements Listener {
     }
 
     public void open(Player player, JsonObject message) {
-        var anticheat = Anticheat.of(player);
-        if (anticheat == null) {
-            Control.error(player, "No anticheat goes by the letter " + player.getName().charAt(2));
+        var anticheats = Anticheat.of(player);
+        if (anticheats.isEmpty()) {
+            var unknown = Anticheat.letters(player).chars()
+                .filter(letter -> Anticheat.byLetter((char) letter) == null)
+                .findFirst().orElse('?');
+            Control.error(player, "No anticheat goes by the letter " + (char) unknown);
             return;
         }
         var session = of(player);
@@ -106,13 +109,14 @@ public final class Sessions implements Listener {
             if (session.closing) {
                 Control.error(player, "This session was closed");
             } else if (session.entered) {
-                Control.ready(player, session, true, anticheat);
+                Control.ready(player, session, true, anticheats);
             }
             // Otherwise the player is still on the way in, and ready follows its arrival
             return;
         }
-        if (!anticheat.installed()) {
-            Control.error(player, anticheat.describe() + " is not installed on this server");
+        var missing = anticheats.stream().filter(anticheat -> !anticheat.installed()).findFirst();
+        if (missing.isPresent()) {
+            Control.error(player, missing.get().describe() + " is not installed on this server");
             return;
         }
         if (byPlayer.size() >= limit) {
@@ -146,7 +150,7 @@ public final class Sessions implements Listener {
                 }
                 opened.entered = true;
                 plugin.getSLF4JLogger().info("Session {} opened: {}", opened.id(), opened.info());
-                Control.ready(player, opened, false, anticheat);
+                Control.ready(player, opened, false, anticheats);
             });
         await(opened, arrival);
     }

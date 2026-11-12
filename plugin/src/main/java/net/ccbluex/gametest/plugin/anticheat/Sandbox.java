@@ -12,7 +12,7 @@ import org.bukkit.plugin.Plugin;
 
 /**
  * Puts every installed anticheat into a PluginHooker sandbox: its listeners hear only the test players it watches,
- * and players of other anticheats, Vanilla bots and spectators are hidden from it.
+ * and the other test players, Vanilla bots and spectators are hidden from it.
  */
 public final class Sandbox implements Listener {
 
@@ -44,7 +44,7 @@ public final class Sandbox implements Listener {
             if (plugin == null) {
                 continue;
             }
-            if (anticheat == watching) {
+            if (watching.contains(anticheat)) {
                 event.getHookedPlayer().enablePlugin(plugin);
             } else {
                 event.getHookedPlayer().disablePlugin(plugin);

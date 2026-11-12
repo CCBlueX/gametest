@@ -6,9 +6,12 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.jspecify.annotations.Nullable;
 
+import java.util.EnumSet;
+import java.util.Set;
+
 /**
- * What watches a test player: the letter after {@code GT} in its name. All of them are installed side by side, each
- * in a {@link Sandbox} that shows it only the players it watches.
+ * What watches a test player: the letters between {@code GT} and {@code _} in its name, one per anticheat. All of
+ * them are installed side by side, each in a {@link Sandbox} that shows it only the players it watches.
  */
 public enum Anticheat {
 
@@ -33,12 +36,29 @@ public enum Anticheat {
         this.setsUpOnLogin = setsUpOnLogin;
     }
 
-    /** The test player's anticheat, or null for anyone else. */
-    public static @Nullable Anticheat of(Player player) {
+    /** The test player's anticheats; empty for anyone else, or when one of its letters stands for none. */
+    public static Set<Anticheat> of(Player player) {
+        var anticheats = EnumSet.noneOf(Anticheat.class);
         if (!TestPlayers.matches(player)) {
-            return null;
+            return anticheats;
         }
-        var letter = player.getName().charAt(2);
+        for (var letter : letters(player).toCharArray()) {
+            var anticheat = byLetter(letter);
+            if (anticheat == null) {
+                return EnumSet.noneOf(Anticheat.class);
+            }
+            anticheats.add(anticheat);
+        }
+        return anticheats;
+    }
+
+    /** The letters a test player's name asks for. */
+    public static String letters(Player player) {
+        var name = player.getName();
+        return name.substring(2, name.indexOf('_'));
+    }
+
+    public static @Nullable Anticheat byLetter(char letter) {
         for (var anticheat : values()) {
             if (anticheat.letter == letter) {
                 return anticheat;
@@ -65,13 +85,15 @@ public enum Anticheat {
         return pluginName == null || plugin() != null;
     }
 
+    /** The plugin's name, as reports name the anticheat they come from. */
+    public String label() {
+        return pluginName == null ? "Vanilla" : pluginName;
+    }
+
     /** Name and version, as the harness reports which anticheat a test ran against. */
     public String describe() {
-        if (pluginName == null) {
-            return "Vanilla";
-        }
         var plugin = plugin();
-        return plugin == null ? pluginName : pluginName + " " + plugin.getPluginMeta().getVersion();
+        return plugin == null ? label() : label() + " " + plugin.getPluginMeta().getVersion();
     }
 
 }

@@ -99,7 +99,7 @@ class ServerSession internal constructor(private val context: ClientGameTestCont
             }
             "report" -> {
                 val report = ServerReport.entries.firstOrNull { it.name == message["report"].asString }
-                add(report?.let { ConsoleLine("", text, it) }
+                add(report?.let { ConsoleLine("", text, it, anticheat = message["anticheat"]?.asString) }
                     ?: ConsoleLine("", "unknown report: $json", ServerReport.ERROR))
             }
             "log" -> add(ConsoleLine(message["level"].asString, text))

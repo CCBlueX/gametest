@@ -2,7 +2,7 @@ package net.ccbluex.gametest.harness
 
 /**
  * What watches the bot on the server, see docs/anticheats.md. The server installs them side by side and reads the
- * bot's choice from the letter after `GT` in its name.
+ * bot's choice from the letters between `GT` and `_` in its name.
  */
 enum class Anticheat(
     internal val letter: Char,

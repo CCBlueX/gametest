@@ -11,9 +11,12 @@ import net.minecraft.resources.Identifier;
 import org.bukkit.Bukkit;
 import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.entity.Player;
+import org.jspecify.annotations.Nullable;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Set;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 /**
  * What the server tells the client harness on the plugin channel {@code gametest:control}: one JSON object per
@@ -30,12 +33,13 @@ public final class Control {
     private Control() {
     }
 
-    public static void ready(Player player, Session session, boolean resumed, Anticheat anticheat) {
+    public static void ready(Player player, Session session, boolean resumed, Set<Anticheat> anticheats) {
         send(player, "ready", message -> {
             message.addProperty("session", session.id());
             message.addProperty("resumed", resumed);
             message.addProperty("server", Bukkit.getName() + " " + Bukkit.getVersion());
-            message.addProperty("anticheat", anticheat.describe());
+            var described = anticheats.stream().map(Anticheat::describe).collect(Collectors.joining(", "));
+            message.addProperty("anticheat", described);
         });
     }
 
@@ -57,9 +61,13 @@ public final class Control {
         });
     }
 
-    public static void report(Player player, String report, String text) {
+    /** A report of {@code anticheat}, or of Paper when it is null. */
+    public static void report(Player player, @Nullable String anticheat, String report, String text) {
         send(player, "report", message -> {
             message.addProperty("report", report);
+            if (anticheat != null) {
+                message.addProperty("anticheat", anticheat);
+            }
             message.addProperty("message", shortened(text));
         });
     }

@@ -15,8 +15,15 @@ object GameTestEnvironment {
     /** `host[:port]` of the server. */
     val address: String = ownServer ?: PUBLIC_SERVER
 
-    /** What watches the bots of this run. */
-    val anticheat: Anticheat = variable("GAMETEST_SERVER_ANTICHEAT")?.let(Anticheat::of) ?: Anticheat.GRIM
+    /** What watches the bots of this run, all of them at once: `intave,mx`. */
+    val anticheats: Set<Anticheat> = variable("GAMETEST_SERVER_ANTICHEAT")
+        ?.split(',')
+        ?.map(String::trim)
+        ?.filter(String::isNotEmpty)
+        ?.map(Anticheat::of)
+        ?.toSet()
+        ?.takeIf(Set<Anticheat>::isNotEmpty)
+        ?: setOf(Anticheat.GRIM)
 
     /** Server game tests run with a token for the public server, or against a server of one's own. */
     val enabled = token != null || ownServer != null

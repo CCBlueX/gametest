@@ -1,6 +1,7 @@
 # Anticheats
 
-Each bot picks one with `GAMETEST_SERVER_ANTICHEAT`; its name carries the choice as the letter after `GT`.
+Each bot picks one or more with `GAMETEST_SERVER_ANTICHEAT`, comma separated (`intave,mx`); its name carries the
+choice as the letters between `GT` and `_` (`GTIX_...`).
 
 | Anticheat | `GAMETEST_SERVER_ANTICHEAT` | Letter | `test.ccbluex.net` | `docker compose` |
 | --- | --- | --- | --- | --- |
@@ -14,7 +15,9 @@ Each bot picks one with `GAMETEST_SERVER_ANTICHEAT`; its name carries the choice
 | [AntiCheatAddition](https://www.spigotmc.org/resources/anticheataddition.33590/), no movement | `anticheataddition` | `A` | yes | no |
 | [FairPlay](https://builtbybit.com/resources/fairplay-combat-anticheat-local-ai.111265/), no movement | `fairplay` | `F` | yes | no |
 
-A test fails on whatever the bot's anticheat flags or sets back; the other anticheats leave the bot alone. Some
-check nothing for a moment after a join or a teleport, which the harness waits out.
+A test fails on whatever any of the bot's anticheats flags or sets back; the others leave the bot alone. Some
+check nothing for a moment after a join or a teleport, which the harness waits out, as long as the slowest of them.
+Several anticheats see the same packets, but the first one to set a move back takes it from the others: a bad move
+watched by Grim and Intave is flagged by Grim alone. Pair anticheats that check different things, such as `intave,mx`.
 
-A server without the chosen anticheat refuses the session, and the test fails.
+A server without one of the chosen anticheats refuses the session, and the test fails.

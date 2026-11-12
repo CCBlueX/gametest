@@ -15,7 +15,7 @@ import kotlin.io.path.Path
 
 /**
  * One game test on the game test server: the client joins under a name of its own, gets a session with fresh
- * worlds and the run's anticheat watching, runs [body], and the test passes if the server objected to nothing
+ * worlds and the run's anticheats watching, runs [body], and the test passes if the server objected to nothing
  * and the client logged no error. The class name without `GameTest` is what `-Dgametest.only` selects.
  *
  * Without `GAMETEST_API_TOKEN` or `GAMETEST_SERVER_ADDRESS` the test is skipped. Outcomes are collected, so
@@ -42,8 +42,9 @@ abstract class ServerGameTest(
             return
         }
 
-        val anticheat = GameTestEnvironment.anticheat
-        val playerName = "GT${anticheat.letter}_${randomName()}"
+        val anticheats = GameTestEnvironment.anticheats
+        val prefix = "GT${anticheats.map(Anticheat::letter).joinToString("")}_"
+        val playerName = prefix + randomName(MAX_NAME_LENGTH - prefix.length)
         val account = context.computeOnClient<OfflineAccount, RuntimeException> {
             OfflineAccount.switch(it, playerName)
         }
@@ -52,7 +53,7 @@ abstract class ServerGameTest(
         ClientErrors.reset()
         try {
             beforeJoin(context)
-            val scope = GameTestScope(context, server, world, playerName, anticheat, name)
+            val scope = GameTestScope(context, server, world, playerName, anticheats, name)
             scope.use {
                 it.join()
                 it.body()
@@ -91,14 +92,14 @@ abstract class ServerGameTest(
     /** Runs on the test thread once the client is back on the title screen, whether the test passed or not. */
     protected open fun afterTest(context: ClientGameTestContext) = Unit
 
-    private fun randomName(): String {
+    private fun randomName(length: Int): String {
         val random = ThreadLocalRandom.current()
-        return String(CharArray(NAME_LENGTH) { NAME_CHARACTERS[random.nextInt(NAME_CHARACTERS.length)] })
+        return String(CharArray(length) { NAME_CHARACTERS[random.nextInt(NAME_CHARACTERS.length)] })
     }
 
     private companion object {
         const val STARTUP_TIMEOUT = 20 * 60 * 5
-        const val NAME_LENGTH = 12
+        const val MAX_NAME_LENGTH = 16
         const val NAME_CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
     }
 

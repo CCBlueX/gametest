@@ -10,6 +10,7 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerKickEvent;
 import org.bukkit.plugin.Plugin;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Arrays;
 import java.util.UUID;
@@ -89,13 +90,18 @@ public final class Probe implements Listener {
     /** What {@code anticheat} reports about a player counts only for the test players it watches. */
     void report(Anticheat anticheat, UUID player, String report, Object... fields) {
         players.online().stream()
-            .filter(online -> online.getUniqueId().equals(player) && Anticheat.of(online) == anticheat)
-            .forEach(online -> report(online, report, fields));
+            .filter(online -> online.getUniqueId().equals(player) && Anticheat.of(online).contains(anticheat))
+            .forEach(online -> send(online, anticheat.label(), report, fields));
     }
 
     private void report(Player player, String report, Object... fields) {
+        send(player, null, report, fields);
+    }
+
+    private void send(Player player, @Nullable String anticheat, String report, Object... fields) {
         if (TestPlayers.matches(player)) {
-            Control.report(player, report, Arrays.stream(fields).map(String::valueOf).collect(Collectors.joining(" ")));
+            var text = Arrays.stream(fields).map(String::valueOf).collect(Collectors.joining(" "));
+            Control.report(player, anticheat, report, text);
         }
     }
 

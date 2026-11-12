@@ -5,7 +5,8 @@ server too.
 
 ## Names
 
-A bot is named `GT` + its [anticheat's letter](anticheats.md) + `_` + up to 12 letters and digits.
+A bot is named `GT` + its [anticheats' letters](anticheats.md) + `_` + letters and digits, 16 characters at most.
+`GTIX_a1b2c3d4e5f` is watched by Intave and MX at once.
 
 ## Login
 
@@ -31,12 +32,12 @@ Server to client:
 
 | type | fields | meaning |
 | --- | --- | --- |
-| `ready` | `session: string`, `resumed: bool`, `server: string`, `anticheat: string` | Worlds exist; commands are accepted. `anticheat` is `Vanilla`, or the anticheat plugin's name and version. |
+| `ready` | `session: string`, `resumed: bool`, `server: string`, `anticheat: string` | Worlds exist; commands are accepted. `anticheat` describes the bot's anticheats in the order of the docs table, joined by `, `: `Vanilla`, or the plugin's name and version (`GrimAC 2.3.75, Intave 14.8.4`). |
 | `busy` | `retryAfter: int` (seconds) | Session limit reached; ask again. |
 | `closed` | | The answer to `close`. A client quits only after it, or the server may never read the `close`. |
 | `output` | `id: int`, `message: string` | One feedback line of command `id`, as a console shows it. |
 | `done` | `id: int`, `result: int` | Command `id` finished; `result` is what it returned, 0 when it failed. Sent after its output. |
-| `report` | `report: "FLAG"\|"NOTE"\|"SETBACK"\|"FAILMOVE"\|"KICK"`, `message: string` | The server objected: FLAG `<check> <violations> <details>` and SETBACK `<x> <y> <z>` from the player's anticheat, FAILMOVE `<reason>` and KICK `<cause> <reason>` from Paper. NOTE is a FLAG of a check the anticheat calls experimental; it does not fail a test. |
+| `report` | `report: "FLAG"\|"NOTE"\|"SETBACK"\|"FAILMOVE"\|"KICK"`, `anticheat?: string`, `message: string` | The server objected: FLAG `<check> <violations> <details>` and SETBACK `<x> <y> <z>` from one of the player's anticheats, named by its plugin in `anticheat`, FAILMOVE `<reason>` and KICK `<cause> <reason>` from Paper. NOTE is a FLAG of a check the anticheat calls experimental; it does not fail a test. |
 | `log` | `level: "INFO"\|"WARN"\|"ERROR"`, `message: string` | A line of the server log that contains the player's name. |
 | `error` | `message: string`, `id?: int` | Protocol misuse, or a refused command, which is followed by `done` with result 0. |
 

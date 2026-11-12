@@ -24,7 +24,7 @@ names the bot, or an ERROR the client logged. The server's state is the truth; t
 | Variable | Meaning |
 | --- | --- |
 | `GAMETEST_API_TOKEN` | LiquidBounce API token from https://liquidbounce.net/account. Needed for `test.ccbluex.net`. |
-| `GAMETEST_SERVER_ANTICHEAT` | One of the values in docs/anticheats.md of CCBlueX/gametest. CI runs one job per anticheat. |
+| `GAMETEST_SERVER_ANTICHEAT` | Values from docs/anticheats.md of CCBlueX/gametest, comma separated for several at once (`intave,mx`). CI runs one job per value. |
 | `GAMETEST_SERVER_ADDRESS` | Own server, such as `localhost:25565` from `docker compose up` in CCBlueX/gametest. |
 
 No token and no address: every `ServerGameTest` is skipped with one log line. `-Dgametest.only=A,B` runs the
@@ -56,7 +56,7 @@ Scope (`GameTestScope`, the receiver of the test body):
 - `origin`: where the bot starts, looking south. FLAT: grass at y -61, origin (0, -60, 0). `TestWorld.VOID`: stone
   platform, origin (0, 64, 0). `TestWorld.generated(seed, structures)`: real terrain, sealed glass room at (0, -40, 0).
   `TestWorld.generated(seed, origin) { prepare }`: real terrain with a start the test builds itself.
-- `playerName`, `anticheat` (`Anticheat` enum): branch on it when only one anticheat catches something.
+- `playerName`, `anticheats` (`Set<Anticheat>`): branch on it when only some anticheats catch something.
 - `client { minecraft -> }`: run on the client thread and return a value. Never block inside it.
 - `ticks(n)`, `awaitClient(what, timeout) { minecraft -> condition }`.
 - `input`: Fabric `TestInput` (`holdKey { it.keyUp }`, `releaseKey`, `pressKey`, `lookAt`, `typeChars`, mouse).
@@ -101,19 +101,19 @@ is not a bug (network services unreachable on CI and the like). Never to hide a 
 ```text
 (GameTest) AutoJump failed
 java.lang.IllegalStateException: the server objected 2 time(s), see gametest/AutoJump.log
-  FLAG Simulation 1.0 5.000000
-  SETBACK 0.5 -60.0 3.21
+  FLAG GrimAC Simulation 1.0 5.000000
+  SETBACK GrimAC 0.5 -60.0 3.21
 ```
 
 `build/run/clientGameTest/gametest/<Test>.log` has every message the test sent (`>`) and got (`<`) with
-timestamps. FLAG is `<check> <violations> <details>`; the check name says what the anticheat thinks happened:
-movement physics, interaction geometry (reach, hitboxes), packet content and order, inventory clicks. NOTE is a flag
-of a check the anticheat calls experimental: logged as a warning, never a failure.
+timestamps. FLAG is `<anticheat> <check> <violations> <details>`; the check name says what the anticheat thinks
+happened: movement physics, interaction geometry (reach, hitboxes), packet content and order, inventory clicks. NOTE
+is a flag of a check the anticheat calls experimental: logged as a warning, never a failure.
 `build/run/clientGameTest/logs/latest.log` is the client.
 
 Common causes: a command sent right before the test ended (the harness waits for answers, but not for effects),
 a fixture not yet loaded on the client, a module acting in the same tick it turned, two tests using the same
-objective name, a test that expects a flag only one anticheat raises (branch on `anticheat`).
+objective name, a test that expects a flag only one anticheat raises (branch on `anticheats`).
 
 ## Running the server yourself
 

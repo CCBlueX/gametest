@@ -25,8 +25,8 @@ class GameTestScope internal constructor(
     private val world: TestWorld,
     /** The name this test plays under, a fresh one for every test. */
     val playerName: String,
-    /** What watches the player, so that a test can expect what only one anticheat catches. */
-    val anticheat: Anticheat,
+    /** What watches the player, so that a test can expect what only some anticheats catch. */
+    val anticheats: Set<Anticheat>,
     test: String,
 ) : AutoCloseable {
 
@@ -36,6 +36,9 @@ class GameTestScope internal constructor(
     val input: TestInput get() = context.input
 
     internal val verdict = Verdict(server)
+
+    private val warmupTicks = anticheats.maxOf { it.warmupTicks }
+    private val teleportGraceTicks = anticheats.maxOf { it.teleportGraceTicks }
 
     private val entrance = ServerEntrance(this, world, test)
     private var prepared = false
@@ -103,8 +106,8 @@ class GameTestScope internal constructor(
             ticks(window)
             if (server.console.drop(checked).none { it.report in CORRECTIONS }) {
                 verdict.excuseCorrections(since until checked)
-                if (anticheat.teleportGraceTicks > 0) {
-                    ticks(anticheat.teleportGraceTicks)
+                if (teleportGraceTicks > 0) {
+                    ticks(teleportGraceTicks)
                 }
                 return
             }
@@ -157,8 +160,11 @@ class GameTestScope internal constructor(
         check(ready["resumed"].asBoolean == prepared) {
             if (prepared) "The session did not outlast the reconnect" else "The server resumed a session of $playerName"
         }
-        check(anticheat.describes(ready["anticheat"].asString)) {
-            "The server watches $playerName with ${ready["anticheat"].asString}, not $anticheat"
+        // One description per anticheat, such as `GrimAC 2.3.75, Intave 14.8.4`
+        val described = ready["anticheat"].asString.split(", ")
+        val missing = anticheats.filter { anticheat -> described.none(anticheat::describes) }
+        check(missing.isEmpty()) {
+            "The server watches $playerName with ${ready["anticheat"].asString}, not ${missing.joinToString()}"
         }
         if (!prepared) {
             GAME_RULES.forEach { run("gamerule $it") }
@@ -170,8 +176,8 @@ class GameTestScope internal constructor(
         teleport(origin, 0f, 0f, Level.OVERWORLD)
         arrive(origin, Level.OVERWORLD, since)
         val elapsedTicks = (System.nanoTime() - connected) / NANOS_PER_TICK
-        if (anticheat.warmupTicks > elapsedTicks) {
-            ticks((anticheat.warmupTicks - elapsedTicks).toInt())
+        if (warmupTicks > elapsedTicks) {
+            ticks((warmupTicks - elapsedTicks).toInt())
         }
     }
 

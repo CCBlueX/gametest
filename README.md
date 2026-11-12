@@ -52,7 +52,7 @@ last. Override `awaitClient`, `beforeJoin` and `afterTest` of `ServerGameTest` t
 | Variable | Meaning |
 | --- | --- |
 | `GAMETEST_API_TOKEN` | The API token from your [LiquidBounce account](https://liquidbounce.net/account). Needed for the public server. |
-| `GAMETEST_SERVER_ANTICHEAT` | Which [anticheat](docs/anticheats.md) watches the bots. |
+| `GAMETEST_SERVER_ANTICHEAT` | Which [anticheats](docs/anticheats.md) watch the bots, comma separated: `grim` or `intave,mx`. |
 | `GAMETEST_SERVER_ADDRESS` | Another server, such as `localhost:25565`; then no token is needed. |
 
 Without a token or an address the tests are skipped. `-Dgametest.only=AutoShearer,Harness` runs only those.

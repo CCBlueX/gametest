@@ -16,12 +16,13 @@ import java.util.regex.Pattern;
 
 /**
  * The proxy in front lets a name of this pattern in only for a bot that proved where it comes from, and never
- * for a real account, so the name alone tells a test player from a spectator. The letter after {@code GT} is the
- * player's {@link Anticheat}. The online ones are kept for threads other than the server's.
+ * for a real account, so the name alone tells a test player from a spectator. The letters between {@code GT} and
+ * {@code _} are the player's {@link Anticheat}s. The online ones are kept for threads other than the server's.
  */
 public final class TestPlayers implements Listener {
 
-    private static final Pattern NAME = Pattern.compile("^GT[A-Z]_[A-Za-z0-9]{1,12}$");
+    // At most 16 characters, as any player name
+    private static final Pattern NAME = Pattern.compile("^(?=.{5,16}$)GT[A-Z]+_[A-Za-z0-9]+$");
 
     private final Map<UUID, Player> online = new ConcurrentHashMap<>();
 
