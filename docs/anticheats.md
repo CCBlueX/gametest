@@ -6,7 +6,7 @@ choice as the letters between `GT` and `_` (`GTIX_...`).
 | Anticheat | `GAMETEST_SERVER_ANTICHEAT` | Letter | `test.ccbluex.net` | `docker compose` |
 | --- | --- | --- | --- | --- |
 | None, only Paper's own movement checks | `vanilla` | `V` | yes | yes |
-| [Grim](https://modrinth.com/plugin/grimac) (default) | `grim` | `G` | yes | yes |
+| [Grim](https://modrinth.com/plugin/grimac) | `grim` | `G` | yes | yes |
 | [Intave](https://modrinth.com/plugin/intave) | `intave` | `I` | yes | yes |
 | [Vulcan](https://www.spigotmc.org/resources/vulcan-anti-cheat.83626/) | `vulcan` | `U` | yes | no |
 | [Matrix](https://matrix.rip) | `matrix` | `M` | yes | no |

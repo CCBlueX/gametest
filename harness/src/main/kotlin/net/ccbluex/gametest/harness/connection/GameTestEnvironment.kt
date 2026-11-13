@@ -15,24 +15,23 @@ object GameTestEnvironment {
     /** `host[:port]` of the server. */
     val address: String = ownServer ?: PUBLIC_SERVER
 
-    /** What watches the bots of this run, all of them at once: `intave,mx`. */
+    /** What watches the bots of this run, all of them at once: `intave,mx`. None when the run is [local]. */
     val anticheats: Set<Anticheat> = variable("GAMETEST_SERVER_ANTICHEAT")
         ?.split(',')
         ?.map(String::trim)
         ?.filter(String::isNotEmpty)
         ?.map(Anticheat::of)
         ?.toSet()
-        ?.takeIf(Set<Anticheat>::isNotEmpty)
-        ?: setOf(Anticheat.GRIM)
+        ?: emptySet()
 
     /** Whether Paper's own movement checks are all that watch the bots. */
     val paperOnly = anticheats.singleOrNull() == Anticheat.VANILLA
 
-    /** Server game tests run with a token for the public server, or against a server of one's own. */
-    val enabled = token != null || ownServer != null
+    /** Server game tests run with anticheats chosen and a token for the public server or a server of one's own. */
+    val enabled = anticheats.isNotEmpty() && (token != null || ownServer != null)
 
-    /** Tests on the integrated server run while no anticheat is picked, so CI gives them a job of their own. */
-    internal val integrated = variable("GAMETEST_SERVER_ANTICHEAT") == null
+    /** Without an anticheat chosen the run plays the singleplayer and client tests instead. */
+    internal val local = anticheats.isEmpty()
 
     /** Shown to spectators next to a running test. */
     internal val repository: String? = variable("GITHUB_REPOSITORY")

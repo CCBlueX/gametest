@@ -31,11 +31,19 @@ repositories {
 
 dependencies {
     // In the client game test source set that fabricApi.configureTests creates
-    "gametestImplementation"("net.ccbluex:gametest-harness:1.0.3+26.3")
+    "gametestImplementation"("net.ccbluex:gametest-harness:2.0.0+26.3")
 }
 ```
 
 The harness needs Fabric API and Fabric Language Kotlin at runtime.
+
+The class a test extends says where it plays:
+
+| Class | Plays | Runs when |
+| --- | --- | --- |
+| `ServerGameTest` | on the game test server, the chosen anticheats judge it | `GAMETEST_SERVER_ANTICHEAT` is set, with a token or an address |
+| `SingleplayerGameTest` | in a singleplayer world of the client's integrated server, nothing judges it | `GAMETEST_SERVER_ANTICHEAT` is unset |
+| `ClientGameTest` | on the title screen, no world | `GAMETEST_SERVER_ANTICHEAT` is unset |
 
 ```kotlin
 class AutoShearerGameTest : ServerGameTest({
@@ -44,25 +52,48 @@ class AutoShearerGameTest : ServerGameTest({
     // ... switch on what is under test
     awaitServer("entity @e[type=minecraft:sheep,nbt={Sheared:1b}]")
 })
+
+class ChestFinderGameTest : SingleplayerGameTest({
+    setBlock(origin.south(5), "minecraft:chest")
+    // ... same scope, TestWorld and commands as on the server
+})
+
+class ConfigGameTest : ClientGameTest({ context ->
+    context.runOnClient<RuntimeException> { /* ... */ }
+})
 ```
 
 Register each test as a `fabric-client-gametest` entrypoint, and `net.ccbluex.gametest.harness.ResultsGameTest`
-last. Override `awaitClient`, `beforeJoin` and `afterTest` of `ServerGameTest` to put your mod's state in order.
-A test passes with up to `violationLevel` (5) flags, corrections and errors, and a failed one runs again up to
-`retries` (2) times; both can be overridden per test.
+last. A server or singleplayer test passes with up to `violationLevel` (5) flags, corrections and errors, and a
+failed one runs again up to `retries` (2) times; both can be overridden per test. A client test runs once.
+Use a singleplayer test for what the client finds, shows or keeps, with nothing for an anticheat to judge.
 
-A test with nothing for an anticheat to judge, one of what the client finds, shows or keeps, can override
-`integrated` to `true`. It then plays in a singleplayer world of the client's integrated server: the same
-`TestWorld`, commands and console, but no anticheat and no Paper. Such tests run only while
-`GAMETEST_SERVER_ANTICHEAT` is unset, so CI runs them once, in a job of their own, and needs no token for them.
+A mod puts its own state in order with a `GameTestSetup`, registered as a `gametest-setup` entrypoint. A Kotlin
+`object` needs the `kotlin` adapter; a class with a public no-arg constructor takes a plain string. Every registered
+setup runs around every test, in entrypoint order:
+
+```kotlin
+object MyModSetup : GameTestSetup {
+    override fun awaitClient(context: ClientGameTestContext) = Unit // wait for the mod's startup after the title screen
+    override fun beforeTest(context: ClientGameTestContext) = Unit  // settings back to defaults, before the join
+    override fun afterTest(context: ClientGameTestContext) = Unit   // after leaving, passed or not (reverse order)
+}
+```
+
+```json
+"entrypoints": {
+  "gametest-setup": [{ "adapter": "kotlin", "value": "com.example.gametest.MyModSetup" }]
+}
+```
 
 | Variable | Meaning |
 | --- | --- |
 | `GAMETEST_API_TOKEN` | The API token from your [LiquidBounce account](https://liquidbounce.net/account). Needed for the public server. |
-| `GAMETEST_SERVER_ANTICHEAT` | Which [anticheats](docs/anticheats.md) watch the bots, comma separated: `grim` or `intave,mx`. |
+| `GAMETEST_SERVER_ANTICHEAT` | Which [anticheats](docs/anticheats.md) watch the bots, comma separated: `grim` or `intave,mx`. Unset, the run plays the singleplayer and client tests instead. |
 | `GAMETEST_SERVER_ADDRESS` | Another server, such as `localhost:25565`; then no token is needed. |
 
-Without a token or an address the server tests are skipped. `-Dgametest.only=AutoShearer,Harness` runs only those.
+With anticheats chosen but neither a token nor an address the server tests are skipped.
+`-Dgametest.only=AutoShearer,Config` runs only those classes, of any kind.
 
 The console shows a line per test; on GitHub Actions (or with `-Dgametest.console=tests`) nothing else, with
 failures as annotations and a table in the job summary. `-Dgametest.console=all` keeps the whole client log there;
@@ -90,7 +121,7 @@ env:
 ```sh
 ./gradlew :plugin:build
 docker compose up --build
-GAMETEST_SERVER_ADDRESS=localhost:25565 ./gradlew runClientGameTest   # in the mod
+GAMETEST_SERVER_ADDRESS=localhost:25565 GAMETEST_SERVER_ANTICHEAT=grim ./gradlew runClientGameTest   # in the mod
 ```
 
 Starting it means agreeing to the [Minecraft EULA](https://aka.ms/MinecraftEULA). It downloads Grim and Intave; the paid

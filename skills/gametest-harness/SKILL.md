@@ -1,6 +1,6 @@
 ---
 name: gametest-harness
-description: Write, run and debug Fabric client game tests with net.ccbluex:gametest-harness on the shared game test server (Paper with an anticheat per bot). Use for ServerGameTest classes, anticheat verdicts, GAMETEST_* variables and CI setup.
+description: Write, run and debug Fabric client game tests with net.ccbluex:gametest-harness on the shared game test server (Paper with an anticheat per bot), in singleplayer or on the title screen. Use for ServerGameTest, SingleplayerGameTest, ClientGameTest, GameTestSetup, anticheat verdicts, GAMETEST_* variables and CI setup.
 ---
 
 # Game test harness
@@ -9,8 +9,17 @@ A `ServerGameTest` starts the real Minecraft client (Fabric client game test API
 bot name of its own, gets fresh worlds there and runs the test body. Every anticheat flag, movement Paper corrected,
 server WARN or ERROR that names the bot and ERROR the client logged raises the attempt's violation level (setbacks
 follow a flag and add nothing); above `violationLevel` (5) it fails. A kick, a refused command or a lost connection fails it at once. A failed attempt
-runs again under a new name, up to `retries` (2) times. Both are open properties of `ServerGameTest` a test may
-override. The server's state is the truth; the client only predicts.
+runs again under a new name, up to `retries` (2) times. Both are open properties a test may override. The server's
+state is the truth; the client only predicts.
+
+The class a test extends says where it plays:
+
+- `ServerGameTest(world) { }`: the game test server, the chosen anticheats judge it. Runs when
+  `GAMETEST_SERVER_ANTICHEAT` is set and a token or an address is.
+- `SingleplayerGameTest(world) { }`: a singleplayer world of the client's integrated server. Runs when
+  `GAMETEST_SERVER_ANTICHEAT` is unset.
+- `ClientGameTest { context -> }`: the title screen, no world, the raw `ClientGameTestContext`; runs once, no
+  retries. Runs when `GAMETEST_SERVER_ANTICHEAT` is unset.
 
 ## Setup
 
@@ -18,7 +27,8 @@ override. The server's state is the truth; the client only predicts.
 2. `"gametestImplementation"("net.ccbluex:gametest-harness:<version>+<mc>")` from `https://maven.ccbluex.net/releases`
    (snapshots: `/snapshots`, version ending `-SNAPSHOT`). Fabric API and Fabric Language Kotlin must be on the run.
 3. In the gametest `fabric.mod.json`: every test class under `entrypoints."fabric-client-gametest"`, then
-   `net.ccbluex.gametest.harness.ResultsGameTest` last, and `"gametest-harness": "*"` under `depends`.
+   `net.ccbluex.gametest.harness.ResultsGameTest` last, the mod's `GameTestSetup` under
+   `entrypoints."gametest-setup"`, and `"gametest-harness": "*"` under `depends`.
 4. Give `runClientGameTest` a Gradle `timeout`, and the CI job a `timeout-minutes`.
 5. Headless: `SDL_VIDEO_FORCE_EGL=1 xvfb-run -a -s "-screen 0 1280x720x24" ./gradlew runClientGameTest`
    (Ubuntu needs `xvfb libegl1 libegl-mesa0`).
@@ -26,18 +36,18 @@ override. The server's state is the truth; the client only predicts.
 | Variable | Meaning |
 | --- | --- |
 | `GAMETEST_API_TOKEN` | LiquidBounce API token from https://liquidbounce.net/account. Needed for `test.ccbluex.net`. |
-| `GAMETEST_SERVER_ANTICHEAT` | Values from docs/anticheats.md of CCBlueX/gametest, comma separated for several at once (`intave,mx`). CI runs one job per value. |
+| `GAMETEST_SERVER_ANTICHEAT` | Values from docs/anticheats.md of CCBlueX/gametest, comma separated for several at once (`intave,mx`). CI runs one job per value, plus one with it unset for the singleplayer and client tests. Needed for server tests, on your own server too. |
 | `GAMETEST_SERVER_ADDRESS` | Own server, such as `localhost:25565` from `docker compose up` in CCBlueX/gametest. |
 
-No token and no address: every `ServerGameTest` is skipped with one log line. `-Dgametest.only=A,B` runs the
-classes `AGameTest` and `BGameTest` only. Bots of one token: at most 5 at a time.
+Anticheats chosen but no token and no address: every `ServerGameTest` is skipped with one log line.
+`-Dgametest.only=A,B` runs the classes `AGameTest` and `BGameTest` only, of any kind. Bots of one token: at most 5 at
+a time.
 
-`override val integrated = true` puts a test in a singleplayer world of the client's integrated server instead:
-same scope, `TestWorld` and commands (run as a console like the session's, feedback in `server.console`, the
-server's log lines naming the player as `log` lines), but `anticheats` is empty and nothing flags. Use it for
-modules that send nothing an anticheat judges (finders, ESP, HUD, chat, commands); keep movement, combat,
-interaction and inventory on the server. These run only while `GAMETEST_SERVER_ANTICHEAT` is unset, token or not.
-`leave`/`join` close and reopen the world, `drop` closes it like a stopping server.
+A `SingleplayerGameTest` has the same scope, `TestWorld` and commands (run as a console like the session's,
+feedback in `server.console`, the server's log lines naming the player as `log` lines), but `anticheats` is empty
+and nothing flags. Use it for modules that send nothing an anticheat judges (finders, ESP, HUD, chat, commands);
+keep movement, combat, interaction and inventory on the server. `leave`/`join` close and reopen the world, `drop`
+closes it like a stopping server.
 
 ## Anatomy
 
@@ -53,10 +63,25 @@ class LegitWalkGameTest : ServerGameTest({              // TestWorld.FLAT unless
 })
 ```
 
-A mod with state of its own subclasses `ServerGameTest` once: `awaitClient(context)` waits until the client may
-join (default: title screen), `beforeJoin(context)` resets the mod (settings back to defaults, caches cleared),
-`afterTest(context)` runs after every test. All three run on the test thread; reach the client with
-`context.runOnClient { }`.
+A mod with state of its own registers one `GameTestSetup` as a `gametest-setup` entrypoint (a Kotlin `object` as
+`{ "adapter": "kotlin", "value": "<class>" }`, a class as a plain string); the harness runs every registered setup
+around every test of every kind, in entrypoint order:
+`awaitClient(context)` waits until the client may play, after the title screen is up; `beforeTest(context)` resets
+the mod (settings back to defaults, caches cleared) after the account switch, before the join or a client test's
+body; `afterTest(context)` runs after every test once the client is back on the title screen, in reverse order. All
+three run on the test thread; reach the client with `context.runOnClient<RuntimeException> { }`.
+
+```kotlin
+object MyModSetup : GameTestSetup {
+    override fun beforeTest(context: ClientGameTestContext) =
+        context.runOnClient<RuntimeException> { MyMod.resetSettings() }
+}
+
+class ConfigGameTest : ClientGameTest({ context ->
+    val loaded = context.computeOnClient<Boolean, RuntimeException> { MyMod.config.load() }
+    check(loaded) { "the config did not load" }
+})
+```
 
 ## API (package `net.ccbluex.gametest.harness`)
 
@@ -133,4 +158,5 @@ objective name, a test that expects a flag only one anticheat raises (branch on 
 ## Running the server yourself
 
 `docker compose up --build` in [CCBlueX/gametest](https://github.com/CCBlueX/gametest) runs Paper with Grim and Intave
-on `localhost:25565`; point `GAMETEST_SERVER_ADDRESS` at it.
+on `localhost:25565`; point `GAMETEST_SERVER_ADDRESS` at it and pick `GAMETEST_SERVER_ANTICHEAT` (`grim` or
+`intave`).

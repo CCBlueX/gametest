@@ -16,13 +16,13 @@ object GameTestResults {
 
     private const val CLIENT_TESTS = "Client game tests"
 
-    internal fun passed(test: String, attempts: Int, started: Long, violations: Violations, integrated: Boolean) =
-        record(Outcome(test, attempts, System.nanoTime() - started, violations, null), integrated)
+    internal fun passed(test: String, attempts: Int, started: Long, violations: Violations, singleplayer: Boolean) =
+        record(Outcome(test, attempts, System.nanoTime() - started, violations, null), singleplayer)
 
     internal fun retrying(test: String, attempt: Int, failure: Throwable) = Console.retrying(test, attempt, failure)
 
-    internal fun failed(test: String, attempts: Int, started: Long, failure: Throwable, integrated: Boolean) =
-        record(Outcome(test, attempts, System.nanoTime() - started, Violations.NONE, failure), integrated)
+    internal fun failed(test: String, attempts: Int, started: Long, failure: Throwable, singleplayer: Boolean) =
+        record(Outcome(test, attempts, System.nanoTime() - started, Violations.NONE, failure), singleplayer)
 
     internal fun skipped() {
         if (!skipped) {
@@ -31,21 +31,9 @@ object GameTestResults {
         }
     }
 
-    /**
-     * Runs [block] as the game test [test] of the client alone and reports it like a server test. Such a test fails
-     * the run on its own, so the failure is thrown on.
-     */
-    fun local(test: String, block: () -> Unit) {
-        announce(CLIENT_TESTS)
-        val started = System.nanoTime()
-        try {
-            block()
-        } catch (failure: Throwable) {
-            record(Outcome(test, 1, System.nanoTime() - started, Violations.NONE, failure), true)
-            throw failure
-        }
-        record(Outcome(test, 1, System.nanoTime() - started, Violations.NONE, null), true)
-    }
+    /** Records a [ClientGameTest] that ran once, failed if it threw [failure]. */
+    internal fun ran(test: String, started: Long, failure: Throwable?) =
+        record(Outcome(test, 1, System.nanoTime() - started, Violations.NONE, failure), true)
 
     private fun record(outcome: Outcome, client: Boolean) {
         announce(
@@ -81,7 +69,7 @@ object GameTestResults {
 
 }
 
-/** Fails the run if a server game test failed. Register it after every [ServerGameTest] of the mod. */
+/** Fails the run if a game test failed. Register it after every game test of the mod. */
 class ResultsGameTest : FabricClientGameTest {
     override fun runTest(context: ClientGameTestContext) = GameTestResults.assertAllPassed()
 }

@@ -18,8 +18,8 @@ import net.minecraft.world.level.Level
 /**
  * What a server game test works with: the client, driven through real input, and its session on the game test
  * server, driven through the session's console like an admin would. The server's state is the truth; the client
- * only shows its prediction. Actions on either side live in the `action` package. A test that asked for the
- * integrated server gets a singleplayer world instead, driven the same way and watched by nothing.
+ * only shows its prediction. Actions on either side live in the `action` package. A [SingleplayerGameTest] gets a
+ * singleplayer world of the integrated server instead, driven the same way and watched by nothing.
  */
 @Suppress("TooManyFunctions")
 class GameTestScope internal constructor(
